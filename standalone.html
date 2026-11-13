@@ -1,0 +1,2151 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>CRM Lite</title>
+  <meta name="description" content="CRM Lite prototype: leads, attribution and revenue logging. All data is placeholder.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Arimo:wght@400;700&family=Radio+Canada+Big:wght@400;500;700&display=swap">
+  <script src="https://unpkg.com/lucide@0.546.0/dist/umd/lucide.min.js"></script>
+  <style>
+/* CRM Lite — flat glass UI. Tokens first, then layout, then components. */
+:root {
+  /* Palette, type and radii follow the Galaxis Hub v2 demo, so the products look like one family. */
+  --primary: #398FF7;            /* Hub blue: icons, focus, large accents */
+  --primary-strong: #2E72C6;     /* Hub's hover blue. Filled buttons and large blue text: white on it passes 4.5:1, Hub's lighter blue does not */
+  --primary-deep: #225694;
+  --link-strong: #0356B8;        /* blue text at small sizes on tinted fills and the page gradient */
+  --tint: #ECF5FF;
+  --bg: #F3F6FA;                 /* flat page colour, a very light blue-grey */
+  --glass: rgba(255, 255, 255, .92);
+  --glass-strong: rgba(255, 255, 255, .96);
+  --fill: rgba(255, 255, 255, .7);
+  --fill-hover: rgba(255, 255, 255, .95);
+  --field: rgba(57, 143, 247, .07);          /* inputs, selects, quiet buttons: a Hub-blue tint so they read on white cards */
+  --field-hover: rgba(57, 143, 247, .12);
+  --row-hover: rgba(57, 143, 247, .08);
+  --fg: #2B2B2B;
+  --fg-2: #656565;
+  --accent: var(--primary-strong);
+  --accent-hover: var(--primary-deep);
+  --accent-soft: rgba(57, 143, 247, .12);
+  --accent-fg: #ffffff;
+  --danger: #E00E0C;
+  --danger-hover: #A40C0A;
+  --divider: rgba(43, 43, 43, .08);          /* very light grey rule, used only where rows need separating */
+  --r-card: 24px;
+  --r-ctl: 14px;
+  --r-pill: 999px;
+  --shadow: 0 0 24px rgba(43, 43, 43, .06);   /* Hub's light shadow: with a flat page it is what lifts the cards */
+  --shadow-soft: 0 0 10px rgba(43, 43, 43, .10);
+  --font-head: 'Radio Canada Big', system-ui, sans-serif;
+  --font: 'Arimo', system-ui, -apple-system, 'Segoe UI', sans-serif;
+  --sidebar-w: 212px;
+  --devbar-h: 44px;
+}
+
+* { box-sizing: border-box; }
+html, body { margin: 0; }
+body {
+  font: 14px/20px var(--font);
+  letter-spacing: .25px;
+  color: var(--fg);
+  padding-top: var(--devbar-h);
+  -webkit-font-smoothing: antialiased;
+  background: var(--bg);
+  min-height: 100vh;
+  /* Long unbroken text (notes, names) must wrap instead of bursting out of its container */
+  overflow-wrap: anywhere;
+}
+h1, h2, h3, p { margin: 0; }
+h1 { font-family: var(--font-head); font-size: 24px; line-height: 28px; font-weight: 700; letter-spacing: 0; color: var(--primary-strong); }
+h2 { font-family: var(--font-head); font-size: 16px; line-height: 20px; font-weight: 700; letter-spacing: .5px; }
+a { color: inherit; text-decoration: none; }
+button, input, select, textarea { font: inherit; color: inherit; }
+[hidden] { display: none !important; }
+svg.lucide { width: 16px; height: 16px; stroke-width: 1.75; flex: none; }
+:focus-visible { outline: 2px solid var(--primary-strong); outline-offset: 2px; }
+::placeholder { color: var(--fg-2); opacity: 1; }
+
+.glass {
+  background: var(--glass);
+  -webkit-backdrop-filter: blur(22px) saturate(140%);
+  backdrop-filter: blur(22px) saturate(140%);
+  box-shadow: var(--shadow);
+}
+.muted { color: var(--fg-2); }
+.show-sm { display: none; }
+.num { text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; }
+
+/* Layout */
+.app { display: grid; grid-template-columns: var(--sidebar-w) minmax(0, 1fr); min-height: calc(100vh - var(--devbar-h)); }
+.rail { position: sticky; top: var(--devbar-h); height: calc(100vh - var(--devbar-h)); margin: 0; padding: 24px 12px 20px; border-radius: 0; background: var(--glass-strong); z-index: 20; /* docked to the left edge like a slide-out panel */ display: flex; flex-direction: column; gap: 6px; }
+.rail-org { padding: 0 12px 18px; }
+.rail-org strong { display: block; font-family: var(--font-head); font-size: 22px; line-height: 26px; font-weight: 500; letter-spacing: -.5px; }
+.rail-org span { font-size: 12px; letter-spacing: .5px; color: var(--fg-2); }
+.rail-link { display: flex; align-items: center; gap: 10px; padding: 10px 12px; border-radius: var(--r-ctl); color: var(--fg-2); font-size: 12px; font-weight: 700; letter-spacing: .5px; }
+.rail-link:hover { background: var(--fill); color: var(--fg); }
+.rail-link.is-active { background: var(--tint); color: var(--link-strong); }
+.rail-me { margin-top: auto; padding: 12px; border-radius: 18px; background: var(--fill); }
+.rail-me strong { display: block; }
+.rail-me span { font-size: 12px; color: var(--fg-2); }
+.main { padding: 32px 32px 64px; max-width: 1240px; width: 100%; margin: 0 auto; }
+
+.page-head { display: flex; align-items: center; justify-content: space-between; gap: 16px; margin-bottom: 24px; flex-wrap: wrap; }
+.page-head .sub { color: var(--fg-2); margin-top: 4px; letter-spacing: .5px; }
+.back { display: inline-flex; align-items: center; gap: 6px; color: var(--fg-2); font-weight: 700; font-size: 12px; letter-spacing: .5px; margin-bottom: 12px; }
+.back:hover { color: var(--fg); }
+
+.card { background: var(--glass); -webkit-backdrop-filter: blur(22px) saturate(140%); backdrop-filter: blur(22px) saturate(140%); box-shadow: var(--shadow); border-radius: var(--r-card); padding: 20px; }
+.card + .card { margin-top: 16px; }
+.tiles .card { margin-top: 0; }
+.card-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 14px; }
+.grid-2 { display: grid; grid-template-columns: minmax(0, 1.15fr) minmax(0, 1fr); gap: 16px; align-items: start; }
+
+/* Summary strip */
+.tiles { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px; margin-bottom: 16px; }
+.tile { padding: 18px 20px; }
+.tile-label { font-size: 12px; letter-spacing: .5px; color: var(--fg); }
+.tile-value { font-family: var(--font-head); font-size: 24px; line-height: 28px; font-weight: 700; letter-spacing: 0; margin: 10px 0 6px; white-space: nowrap; }
+.tile-note { font-size: 12px; letter-spacing: .5px; color: var(--fg-2); }
+
+/* Controls */
+.btn { display: inline-flex; align-items: center; justify-content: center; gap: 8px; height: 36px; padding: 0 16px; border: 0; border-radius: var(--r-pill); background: var(--field); color: var(--link-strong); font-weight: 700; letter-spacing: .1px; cursor: pointer; white-space: nowrap; }
+.btn:hover { background: var(--field-hover); }
+.btn-primary { background: var(--accent); color: var(--accent-fg); }
+.btn-primary:hover { background: var(--accent-hover); }
+.btn:disabled, .btn-primary:disabled { background: var(--field); color: var(--fg-2); cursor: not-allowed; }
+.btn-danger { color: var(--danger); margin-right: auto; }
+.btn-icon { width: 36px; height: 36px; padding: 0; border-radius: 50%; }
+.input, .select, .textarea { width: 100%; height: 38px; padding: 0 14px; letter-spacing: .25px; border: 0; border-radius: var(--r-ctl); background-color: var(--field); }
+.textarea { height: auto; min-height: 76px; padding: 10px 14px; resize: vertical; }
+.input:hover, .select:hover, .textarea:hover { background-color: var(--field-hover); }
+.input:disabled, .select:disabled { opacity: 1; color: var(--fg-2); background-color: rgba(57, 143, 247, .035); cursor: not-allowed; }
+.select { appearance: none; -webkit-appearance: none; padding-right: 34px; background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%23656565' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E"); background-repeat: no-repeat; background-position: right 13px center; }
+.toolbar { display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 12px; }
+.toolbar .select { width: auto; min-width: 150px; }
+.search { position: relative; flex: 1 1 240px; }
+.search .input { padding-left: 38px; }
+.search svg { position: absolute; left: 13px; top: 11px; color: var(--fg-2); }
+.seg { display: inline-flex; padding: 3px; border-radius: var(--r-pill); background: var(--field); }
+.seg button { border: 0; background: none; height: 30px; padding: 0 14px; border-radius: var(--r-pill); font-size: 12px; font-weight: 700; letter-spacing: .5px; color: var(--fg-2); cursor: pointer; }
+.seg button.is-active { background: var(--accent); color: var(--accent-fg); }
+
+.field { display: flex; flex-direction: column; gap: 6px; min-width: 0; }
+.field-label { font-size: 12px; letter-spacing: .5px; color: var(--fg-2); }
+.field-req { margin-left: 4px; font-weight: 400; color: var(--fg-2); }
+.field-req::before { content: '· '; }
+.field-hint { font-size: 12px; letter-spacing: .5px; color: var(--fg-2); }
+.form-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; }
+.form-grid .span-2 { grid-column: 1 / -1; }
+.form-section { font-size: 12px; font-weight: 700; letter-spacing: .5px; color: var(--fg-2); margin: 18px 0 10px; }
+.form-error { color: var(--danger); font-weight: 500; margin-top: 12px; }
+.form-error:empty { display: none; }
+
+/* Pills: tinted fill + dark text of the same hue, never a border */
+.pill { display: inline-flex; align-items: center; height: 24px; padding: 0 10px; border-radius: var(--r-pill); font-size: 12px; font-weight: 700; letter-spacing: .5px; white-space: nowrap; }
+.pill-new, .pill-open, .pill-google-ads { background: #dbe7ff; color: #1e3a8a; }
+.pill-contacted, .pill-meta-ads { background: #e8e3ff; color: #4c1d95; }
+.pill-qualified { background: #fff0cc; color: #6b3f00; }
+.pill-converted, .pill-won, .pill-organic-search { background: #d5f5e3; color: #14532d; }
+.pill-lost { background: #ffe1e1; color: #8f1d1d; }
+.pill-referral, .pill-personal-referral, .pill-duplicate { background: #ffe9d6; color: #7c3500; }
+.pill-direct, .pill-other, .pill-basic, .pill-tracked { background: #e6e9f2; color: #374151; }
+.pill-first-touch, .pill-first-and-last-touch { background: #dbe7ff; color: #1e3a8a; }
+.pill-last-touch { background: #e8e3ff; color: #4c1d95; }
+.pill-walk-in { background: #d9f2f5; color: #0e5560; }
+.pill-event { background: #e9f5d3; color: #3f5a0e; }
+.pill-phone-enquiry { background: #e6e9f2; color: #374151; }
+.pill-email { background: #fde4f1; color: #86194d; }
+.pill-admin { background: var(--accent); color: var(--accent-fg); }
+
+/* Tables: no rules, rounded hover fill */
+.table-wrap { overflow-x: auto; margin: 0 -8px; }
+table { width: 100%; border-collapse: separate; border-spacing: 0 2px; }
+th { text-align: left; font-size: 12px; font-weight: 700; letter-spacing: .5px; color: var(--fg); padding: 8px 12px; white-space: nowrap; }
+/* Hub's tinted header row, softened into rounded glass */
+table:not(.merge-table) thead th { background: var(--accent-soft); }
+table:not(.merge-table) thead th:first-child { border-radius: 14px 0 0 14px; }
+table:not(.merge-table) thead th:last-child { border-radius: 0 14px 14px 0; }
+th.num { text-align: right; }
+td { padding: 11px 12px; vertical-align: middle; }
+td:first-child { border-radius: 14px 0 0 14px; }
+td:last-child { border-radius: 0 14px 14px 0; }
+tr.is-link { cursor: pointer; }
+tbody tr:hover td { background: var(--row-hover); }
+.cell-main { font-weight: 600; }
+.cell-sub { font-size: 12px; letter-spacing: .5px; color: var(--fg-2); }
+.empty { padding: 36px 12px; text-align: center; color: var(--fg-2); }
+.count { font-size: 12px; letter-spacing: .5px; color: var(--fg-2); padding: 8px 4px 0; }
+
+/* Lead detail */
+.notice { display: flex; gap: 12px; padding: 14px 16px; margin-bottom: 16px; border-radius: 18px; background: #FFF4E3; color: #7A4B00; }
+.notice > svg { margin-top: 3px; }
+.notice > div { flex: 1; min-width: 0; }
+.notice a { text-decoration: underline; font-weight: 600; }
+.notice-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-top: 8px; flex-wrap: wrap; }
+.notice .btn { background: rgba(255, 255, 255, .85); }
+.notice .btn:hover { background: #fff; }
+.modal.wide { width: min(880px, 100%); }
+.merge-table th, .merge-table td { padding: 6px 10px; vertical-align: middle; white-space: normal; }
+/* Not a clickable list, so no row highlight; very light dividers separate the rows instead */
+.merge-table { border-spacing: 0; }
+.merge-table thead th, .merge-table tbody tr:not(:last-child) > th, .merge-table tbody tr:not(:last-child) > td { border-bottom: 1px solid var(--divider); }
+.merge-table tbody tr:hover td { background: none; }
+.merge-table thead th:last-child { color: var(--link-strong); font-weight: 700; }
+.merge-table td.after { min-width: 190px; }
+.value-pill { display: flex; align-items: center; min-height: 40px; padding: 0 14px; border-radius: var(--r-ctl); background: var(--field); font-weight: 600; }
+.contact-bar { display: flex; flex-wrap: wrap; gap: 8px; margin: -8px 0 20px; }
+.btn[aria-disabled='true'] { color: #5E5E5E; background: rgba(57, 143, 247, .05); cursor: not-allowed; }
+.head-actions { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.lead-stats .card { margin-top: 0; }
+.lead-stats { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 16px; margin-bottom: 16px; }
+.lead-stats .tile-body { margin: 10px 0 6px; min-height: 28px; display: flex; align-items: center; }
+.lead-stats .tile-body .select { width: 100%; font-size: 14px; }
+.lead-stats .tile-value { margin: 0; white-space: normal; overflow-wrap: anywhere; font-size: 20px; }
+.lead-head { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; }
+.lead-head h1 { color: var(--fg); }
+.lead-ltv { margin-left: auto; text-align: right; }
+.kv { display: grid; grid-template-columns: 150px minmax(0, 1fr); gap: 10px 14px; align-items: center; }
+.kv dt { color: var(--fg-2); }
+.kv dd { margin: 0; overflow-wrap: anywhere; }
+.opp-row { display: grid; grid-template-columns: minmax(0, 1fr) auto 36px; gap: 12px; align-items: center; padding: 8px 10px; margin: 0 -10px; border-radius: 14px; }
+.opp-row > div, .tl-item > div, .lead-head h1 { min-width: 0; }
+.opp-title { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 8px; }
+.opp-row .num { text-align: right; white-space: nowrap; }
+.opp-row:hover { background: var(--row-hover); }
+.opp-total { display: flex; justify-content: space-between; padding-top: 12px; font-weight: 600; }
+
+.timeline { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 14px; }
+.sel { width: 44px; padding-right: 0; }
+.chk { width: 18px; height: 18px; margin: 0; accent-color: var(--accent); cursor: pointer; vertical-align: middle; }
+tr.is-selected td { background: var(--row-hover); }
+.bulk-bar { display: flex; align-items: center; flex-wrap: wrap; gap: 10px; padding: 10px 14px; margin-bottom: 10px; border-radius: 18px; background: var(--accent-soft); }
+.bulk-bar strong { margin-right: 4px; }
+.bulk-bar .select { width: auto; min-width: 150px; background-color: var(--fill-hover); }
+.bulk-bar .btn { background: var(--fill-hover); }
+.bulk-bar .btn:hover { background: #fff; }
+.bulk-bar .btn.btn-delete { background: var(--danger); color: #fff; }
+.bulk-bar .btn.btn-delete:hover { background: var(--danger-hover); }
+.btn-delete { background: var(--danger); color: #fff; }
+.btn-delete:hover { background: var(--danger-hover); }
+.tl-item { display: grid; grid-template-columns: 34px minmax(0, 1fr); gap: 12px; position: relative; }
+/* Connector: runs from the bottom of one icon to the top of the next (the list gap is 14px) */
+.tl-item:not(:last-child)::before { content: ''; position: absolute; left: 16px; top: 34px; bottom: -14px; width: 2px; border-radius: var(--r-pill); background: rgba(57, 143, 247, .4); }
+.tl-icon { width: 34px; height: 34px; border-radius: 50%; background: var(--field); display: grid; place-items: center; color: var(--fg-2); }
+.tl-title { font-weight: 600; display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+.tl-detail { color: var(--fg-2); overflow-wrap: anywhere; }
+.tl-meta { font-size: 12px; color: var(--fg-2); }
+.tl-note { margin-top: 4px; padding: 8px 12px; border-radius: 14px; background: var(--field); color: var(--fg); white-space: pre-wrap; }
+
+/* Modal, toast, dev bar */
+.modal-backdrop { position: fixed; inset: 0; z-index: 50; background: rgba(243, 246, 250, .55); -webkit-backdrop-filter: blur(6px); backdrop-filter: blur(6px); display: grid; place-items: center; padding: 16px; }
+.modal { width: min(640px, 100%); max-height: calc(100vh - 32px); overflow-y: auto; border-radius: 28px; padding: 24px; background: var(--glass-strong); -webkit-backdrop-filter: blur(30px) saturate(140%); backdrop-filter: blur(30px) saturate(140%); box-shadow: var(--shadow-soft), 0 12px 40px rgba(34, 86, 148, .10); }
+.modal p + p { margin-top: 10px; }
+.modal-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 18px; }
+.modal-head h2 { font-size: 20px; line-height: 24px; letter-spacing: 0; }
+.modal-foot { display: flex; justify-content: flex-end; gap: 10px; margin-top: 22px; }
+.toast { max-width: calc(100vw - 32px); text-align: center; position: fixed; left: 50%; bottom: 24px; transform: translate(-50%, 20px); z-index: 2000; padding: 10px 18px; border-radius: var(--r-pill); background: var(--fg); color: #fff; font-weight: 700; letter-spacing: .25px; opacity: 0; pointer-events: none; transition: opacity .2s, transform .2s; }
+.toast.is-on { opacity: 1; transform: translate(-50%, 0); }
+.devbar { position: fixed; top: 0; left: 0; right: 0; height: var(--devbar-h); background: #10151F; color: #CBD5E1; z-index: 1500; display: flex; align-items: center; gap: 16px; padding: 0 16px; font-size: 12px; font-family: system-ui, sans-serif; letter-spacing: 0; }
+.devbar-title { font-weight: 700; color: #fff; display: inline-flex; align-items: center; gap: 8px; white-space: nowrap; }
+.devbar-title .tag { background: #F59E1B; color: #10151F; font-size: 10px; padding: 1px 6px; border-radius: 4px; }
+.devbar select { background: #1E2533; color: #fff; border: 1px solid #334155; border-radius: 6px; height: 28px; padding: 0 8px; font-size: 12px; max-width: 260px; }
+.devbar select option { color: #10151F; }
+.devbar-toggles { display: flex; gap: 6px; overflow-x: auto; flex: 1; align-items: center; }
+.devbar-toggles .lbl, .devbar label { color: #94A3B8; white-space: nowrap; }
+.devbar label { display: flex; align-items: center; gap: 8px; }
+.dev-toggle { display: inline-flex; align-items: center; gap: 6px; background: transparent; color: #CBD5E1; border: 1px solid #334155; border-radius: 6px; height: 26px; padding: 0 10px; font-size: 11px; white-space: nowrap; cursor: pointer; }
+.dev-toggle:hover { background: #1E2533; }
+
+@media (max-width: 760px) {
+  .merge-table thead { display: none; }
+  .merge-table, .merge-table tbody, .merge-table tr { display: block; }
+  .merge-table tr { padding: 10px 0; }
+  .merge-table tbody tr:not(:last-child) { border-bottom: 1px solid var(--divider); }
+  .merge-table tbody tr:not(:last-child) > th, .merge-table tbody tr:not(:last-child) > td { border-bottom: 0; }
+  .merge-table th[scope='row'] { display: block; padding-bottom: 4px; }
+  .merge-table td { display: flex; justify-content: space-between; align-items: center; gap: 12px; padding: 4px 10px; }
+  .merge-table td::before { content: attr(data-label); flex: 0 0 38%; color: var(--fg-2); font-size: 12px; }
+  .merge-table td.after { margin-top: 6px; }
+  .merge-table td.after > .select, .merge-table td.after > .value-pill { flex: 1 1 0; min-width: 0; }
+  .merge-table td.after::before { color: var(--accent); font-weight: 600; }
+}
+@media (max-width: 860px) {
+  .app { grid-template-columns: minmax(0, 1fr); }
+  .rail { position: fixed; top: auto; bottom: 0; left: 0; right: 0; z-index: 30; height: auto; margin: 0; padding: 6px 8px calc(6px + env(safe-area-inset-bottom)); border-radius: 0; /* docked to the bottom edge */ flex-direction: row; justify-content: space-around; background: var(--glass-strong); }
+  .rail-org, .rail-me { display: none; }
+  .rail-link { flex: 1; flex-direction: column; justify-content: center; gap: 2px; padding: 8px 4px; font-size: 11px; letter-spacing: .25px; overflow-wrap: normal; text-align: center; }
+  .main { padding: 20px 16px 96px; }
+  .grid-2 { grid-template-columns: minmax(0, 1fr); }
+  .tiles { gap: 10px; }
+  .tile { padding: 14px; }
+  .tile-value { font-size: 19px; }
+  .lead-stats { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+  .hide-sm { display: none; }
+  .show-sm { display: block; }
+  div.show-sm { margin-top: 4px; }
+  .form-grid { grid-template-columns: minmax(0, 1fr); }
+  .kv { grid-template-columns: 110px minmax(0, 1fr); }
+  .lead-ltv { margin-left: 0; text-align: left; width: 100%; }
+  .devbar { gap: 10px; }
+  .devbar-title, .devbar-toggles .lbl { display: none; }
+  .devbar select { max-width: 150px; }
+  .card { padding: 16px; }
+  td, th { padding-left: 6px; padding-right: 6px; }
+  th, th.num { white-space: normal; }
+  .sel { width: 34px; }
+}
+
+/* Emails and phone numbers: an editable title beside each value */
+.ce { gap: 8px; }
+.ce-row { display: grid; grid-template-columns: 150px minmax(0, 1fr) 36px; gap: 8px; align-items: center; }
+.ce-label { font-size: 12px; letter-spacing: .5px; color: var(--fg-2); }
+.ce-gap { width: 36px; }
+.btn-more { align-self: flex-start; height: 32px; padding: 0 12px; font-size: 12px; }
+.kv dt.head { grid-column: 1 / -1; margin-bottom: -6px; }
+.kv-sub { grid-column: 1 / -1; position: relative; display: grid; grid-template-columns: 150px minmax(0, 1fr); grid-template-columns: subgrid; gap: 6px 14px; align-items: center; }
+@media (max-width: 560px) { @supports not (grid-template-columns: subgrid) { .kv-sub { grid-template-columns: 110px minmax(0, 1fr); } } }
+.kv-sub::before { content: ''; position: absolute; left: 0; top: 2px; bottom: 2px; width: 2px; border-radius: var(--r-pill); background: rgba(57, 143, 247, .35); }
+.kv-sub dt { padding-left: 12px; }
+.ce-multi .ce-row { padding-left: 12px; }
+@media (max-width: 560px) {
+  .ce-row { grid-template-columns: minmax(0, 1fr) 36px; }
+  .ce-row .ce-label { grid-column: 1 / -1; }
+}
+
+/* Date range filter */
+.drp { position: relative; }
+.drp-btn { height: 38px; }
+.drp-btn.is-active { background: var(--accent-soft); }
+.drp-pop { position: absolute; z-index: 30; top: calc(100% + 6px); left: 0; width: 700px; max-width: calc(100vw - 32px); display: grid; grid-template-columns: 184px minmax(0, 1fr); gap: 14px; padding: 14px; border-radius: 20px; background: #fff; box-shadow: var(--shadow-soft), 0 12px 40px rgba(34, 86, 148, .14); }
+.drp-side { display: flex; flex-direction: column; gap: 10px; padding-right: 12px; border-right: 1px solid var(--divider); }
+.drp-presets { display: flex; flex-direction: column; gap: 2px; }
+.drp-lastn { display: flex; align-items: center; gap: 8px; padding: 10px 0 0 12px; border-top: 1px solid var(--divider); font-size: 13px; font-weight: 700; letter-spacing: .25px; }
+.drp-lastn label { white-space: nowrap; }
+.drp-lastn::after { content: 'days'; white-space: nowrap; }
+.drp-lastn .input { width: 64px; padding: 0 8px; text-align: center; }
+.drp-lastn.is-active .input { box-shadow: inset 0 0 0 2px var(--accent); }
+.drp-presets button { border: 0; background: none; height: 34px; padding: 0 12px; border-radius: var(--r-ctl); text-align: left; font-size: 13px; font-weight: 700; letter-spacing: .25px; color: var(--fg); cursor: pointer; }
+.drp-presets button:hover { background: var(--field-hover); }
+.drp-presets button.is-active { background: var(--accent); color: var(--accent-fg); }
+.drp-custom { min-width: 0; }
+.drp-range { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 12px; }
+.drp-fields { display: flex; align-items: center; gap: 8px; flex: 1 1 auto; min-width: 0; justify-content: center; }
+.drp-field { flex: 1 1 0; min-width: 0; max-width: 170px; height: 38px; padding: 0 10px; white-space: nowrap; font-size: 13px; border: 0; border-radius: var(--r-ctl); background: var(--field); text-align: left; cursor: pointer; }
+.drp-field.is-active { box-shadow: inset 0 0 0 2px var(--accent); }
+.drp-months { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+.drp-month-title { text-align: center; font-weight: 700; margin-bottom: 8px; }
+.drp-grid { display: grid; grid-template-columns: repeat(7, 1fr); row-gap: 2px; }
+.drp-dow { text-align: center; font-size: 12px; letter-spacing: .25px; color: var(--fg-2); padding: 4px 0; }
+.drp-day { height: 32px; border: 0; background: none; border-radius: 0; font: inherit; font-size: 13px; color: var(--fg); cursor: pointer; }
+.drp-day:hover { background: var(--field-hover); border-radius: 50%; }
+.drp-day.is-today { font-weight: 700; color: var(--link-strong); }
+.drp-day.is-inside { background: var(--accent-soft); }
+.drp-day.is-start { border-radius: 50% 0 0 50%; }
+.drp-day.is-end { border-radius: 0 50% 50% 0; }
+.drp-day.is-start, .drp-day.is-end { background: var(--accent-soft); }
+.drp-day.is-edge { background: var(--accent); color: var(--accent-fg); border-radius: 50%; font-weight: 700; }
+.drp-day.is-edge.is-start { border-radius: 50% 0 0 50%; }
+.drp-day.is-edge.is-end { border-radius: 0 50% 50% 0; }
+.drp-apply { width: 100%; margin-top: 12px; }
+@media (max-width: 760px) { .drp-pop { grid-template-columns: 1fr; width: 340px; } .drp-side { padding: 0 0 12px; border-right: 0; border-bottom: 1px solid var(--divider); } .drp-presets { flex-direction: row; flex-wrap: wrap; } .drp-lastn { padding-left: 0; } .drp-presets button { height: 32px; } .drp-months { grid-template-columns: 1fr; } .drp-months .drp-month + .drp-month { display: none; } }
+@media (max-width: 560px) { .toolbar .drp { flex: 1 1 100%; } .toolbar .drp-btn { width: 100%; justify-content: flex-start; } .drp-pop { width: min(340px, calc(100vw - 32px)); } }
+
+/* Customer journey */
+.j-summary { display: flex; gap: 12px; align-items: flex-start; width: 100%; padding: 12px 14px; border: 0; border-radius: 16px; background: var(--field); margin-bottom: 16px; font: inherit; letter-spacing: inherit; color: inherit; text-align: left; cursor: pointer; }
+.j-summary:hover { background: var(--field-hover); }
+.j-summary.is-on { box-shadow: inset 0 0 0 2px var(--accent); }
+.j-summary > div { flex: 1 1 auto; min-width: 0; }
+.j-focus { display: grid; place-items: center; flex: none; width: 32px; height: 32px; margin-left: auto; border-radius: 50%; background: #fff; color: var(--link-strong); }
+.j-summary:hover .j-focus { background: var(--accent-soft); }
+.j-summary.is-on .j-focus { background: var(--accent); color: var(--accent-fg); }
+.j-summary svg { flex: none; margin-top: 2px; color: var(--link-strong); }
+.j-headline { font-weight: 700; }
+.j-card { padding: 12px 14px; border-radius: 16px; background: var(--field); }
+.j-kv { margin: 6px 0 0; grid-template-columns: 110px minmax(0, 1fr); gap: 4px 12px; align-items: start; font-size: 13px; }
+.j-toggle { display: flex; align-items: center; gap: 8px; border: 0; background: none; padding: 4px 0; font: inherit; font-size: 13px; color: var(--fg-2); cursor: pointer; text-align: left; }
+.j-toggle svg { flex: none; }
+.j-toggle > svg:last-child { transition: transform .15s; }
+.j-toggle.is-open > svg:last-child { transform: rotate(180deg); }
+.j-pages { list-style: none; margin: 6px 0 0; padding: 0; display: flex; flex-direction: column; gap: 6px; }
+.j-pages li { display: flex; justify-content: space-between; gap: 12px; flex-wrap: wrap; font-weight: 600; }
+.j-head { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; font-weight: 700; }
+.j-head svg { flex: none; color: var(--fg-2); }
+.tl-dot { display: flex; justify-content: center; padding-top: 17px; }
+.tl-dot::before { content: ''; width: 10px; height: 10px; border-radius: 50%; background: var(--accent); }
+.is-pages .tl-dot { padding-top: 10px; }
+.is-pages .tl-dot::before { background: #B7C4D6; }
+.tl-item.is-journey:not(:last-child)::before { top: 28px; }
+.tl-item.is-pages:not(:last-child)::before { top: 21px; }
+
+/* Notes */
+.notes-text { min-height: 76px; padding: 10px 14px; border-radius: var(--r-ctl); background: var(--field); cursor: text; letter-spacing: .25px; }
+.notes-text:hover { background: var(--field-hover); }
+.textarea#lead-notes { resize: none; overflow: hidden; }
+.notes-text.is-empty { color: var(--fg-2); }
+.notes-text p + p, .notes-text p + ul, .notes-text p + ol, .notes-text ul + p, .notes-text ol + p { margin-top: 8px; }
+.notes-text ul, .notes-text ol { margin: 0; padding-left: 22px; }
+.notes-text ul ul, .notes-text ol ol, .notes-text ul ol, .notes-text ol ul { margin-top: 2px; }
+.notes-text .md-h { font-weight: 700; }
+.notes-text code { padding: 1px 6px; border-radius: 6px; background: var(--field); font-size: 13px; }
+.notes-text a { color: var(--link-strong); text-decoration: underline; }
+.j-summary .j-focus svg { margin: 0; color: inherit; }
+.field.is-hidden { display: none; }
+/* Status and close date share a line at every width; the date shows only once the deal is closed. */
+.opp-status-row { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; align-items: start; }
+.opp-status-row .input, .opp-status-row .select { padding-left: 12px; padding-right: 12px; }
+.opp-status-row .select { padding-right: 32px; }
+
+</style>
+</head>
+<body>
+  <header class="devbar" id="devbar"></header>
+
+  <div class="app">
+    <nav class="rail glass" id="rail" aria-label="Main"></nav>
+    <main class="main" id="view"></main>
+  </div>
+
+  <div id="modal-root"></div>
+  <div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+  <script>
+// ---- src/data.js ----
+// Mock data. Every person, email, phone number, campaign and figure here is a placeholder.
+
+const ORG_NAME = 'Demo Organisation';
+const LEAD_STATUSES = ['New', 'Contacted', 'Qualified', 'Converted', 'Lost'];
+// Tracked sources come from click tracking and are never offered when adding a lead by hand.
+const TRACKED_SOURCES = ['Google Ads', 'Meta Ads', 'Organic Search', 'Referral', 'Direct', 'Email'];
+const MANUAL_SOURCES = ['Personal referral', 'Walk-in', 'Event', 'Phone enquiry'];
+const LEAD_SOURCES = [...TRACKED_SOURCES, ...MANUAL_SOURCES];
+const CONTACT_CHANNELS = ['WhatsApp', 'Phone call', 'Web form', 'Email', 'Live chat', 'In person'];
+const OPP_STATUSES = ['Open', 'Won', 'Lost'];
+// Marking a lead or a deal as Lost asks for one of these, plus optional details.
+const LEAD_LOST_REASONS = ['Not a fit', 'No response', 'Went elsewhere', 'Price', 'Spam or invalid', 'Other'];
+const DEAL_LOST_REASONS = ['Price', 'Went elsewhere', 'No response', 'Timing', 'Other'];
+// Fields a merge picks the most recently updated value for. Each lead keeps a timestamp per field (fieldUpdated).
+const MERGE_FIELDS = ['name', 'email', 'phone', 'status', 'assigneeId'];
+
+// First-touch attribution fields, and which of them apply to each source.
+const ATTR_FIELDS = [
+  { key: 'sourceDetail', label: 'Details' },
+  { key: 'campaign', label: 'Campaign' },
+  { key: 'ad', label: 'Ad / ad group' },
+  { key: 'keyword', label: 'Keyword / search term' },
+  { key: 'landingPage', label: 'Landing page' },
+  { key: 'referrer', label: 'Referrer' },
+  { key: 'clickId', label: 'Click ID' }
+];
+const SOURCE_FIELDS = {
+  'Google Ads': ['campaign', 'ad', 'keyword', 'landingPage', 'clickId'],
+  'Meta Ads': ['campaign', 'ad', 'landingPage', 'clickId'],
+  'Organic Search': ['keyword', 'landingPage'],
+  'Referral': ['referrer', 'landingPage'],
+  'Direct': ['landingPage'],
+  'Email': ['campaign', 'landingPage'],
+  // Offline sources have no clicks to track, so they only carry a free-text detail
+  'Personal referral': ['sourceDetail'],
+  'Walk-in': ['sourceDetail'],
+  'Event': ['sourceDetail'],
+  'Phone enquiry': ['sourceDetail']
+};
+
+// Structured details of a tracked visit. They are kept on the activity as `meta`, which is what the customer journey shows.
+// `label` names the channel; the rest are the parameters a real tracker would capture.
+function visitMeta(source, a) {
+  const m = { label: source, landingPage: a.landingPage || '' };
+  if (source === 'Google Ads') return { ...m, source: 'google', medium: 'cpc', campaign: a.campaign || '', ad: a.ad || '', keyword: a.keyword || '', clickId: a.clickId || '' };
+  if (source === 'Meta Ads') return { ...m, source: 'meta', medium: 'paid_social', campaign: a.campaign || '', ad: a.ad || '', clickId: a.clickId || '' };
+  if (source === 'Organic Search') return { ...m, referrer: 'google.com', keyword: a.keyword || '' };
+  if (source === 'Referral') return { ...m, referrer: a.referrer || '' };
+  if (source === 'Email') return { ...m, source: 'email', medium: 'email', campaign: a.campaign || '' };
+  return m;
+}
+
+const SEED_USERS = [
+  { id: 'u1', name: 'Jamie Lim', email: 'jamie.lim@example.com', role: 'admin' },
+  { id: 'u2', name: 'Priya Nair', email: 'priya.nair@example.com', role: 'basic' },
+  { id: 'u3', name: 'Marcus Lee', email: 'marcus.lee@example.com', role: 'basic' },
+  { id: 'u4', name: 'Sofia Rahman', email: 'sofia.rahman@example.com', role: 'basic' }
+];
+
+const SEED_FIRST = ['Aiden', 'Bella', 'Chen', 'Divya', 'Ethan', 'Farah', 'Gabriel', 'Hui Min', 'Imran', 'Jia Hui', 'Kai', 'Lina', 'Mei', 'Nikhil', 'Olivia', 'Pei Shan', 'Qistina', 'Ravi', 'Siti', 'Theo'];
+const SEED_LAST = ['Ang', 'Bose', 'Chua', 'Das', 'Eng', 'Foo', 'Goh', 'Hassan', 'Ismail', 'Koh', 'Low', 'Menon', 'Ng', 'Ong', 'Pillai', 'Quek', 'Raj', 'Sim', 'Teo', 'Wong'];
+const SEED_PAGES = ['/', '/services', '/pricing', '/contact', '/about', '/case-studies', '/blog/getting-started'];
+const SEED_ATTR = {
+  'Google Ads': { campaign: ['Search — Brand', 'Search — Generic', 'Performance Max'], ad: ['Brand terms', 'Service keywords', 'Competitor terms'], keyword: ['service near me', 'best value service package', 'demo organisation pricing', 'book a consultation'] },
+  'Meta Ads': { campaign: ['Lead Gen — Click to WhatsApp', 'Retargeting — Engaged visitors', 'Awareness — Video'], ad: ['Carousel — Packages', 'Video — Customer story', 'Static — Limited offer'] },
+  'Organic Search': { keyword: ['how to choose a service provider', 'service package comparison', 'demo organisation reviews'] },
+  'Referral': { referrer: ['partner-site.example', 'directory.example', 'community-forum.example'] },
+  'Email': { campaign: ['Monthly newsletter', 'Re-engagement series'] },
+  'Personal referral': { sourceDetail: ['Introduced by an existing customer', 'Recommended by a friend of the business'] },
+  'Walk-in': { sourceDetail: ['Front desk visit', 'Showroom visit'] },
+  'Event': { sourceDetail: ['Annual trade expo', 'Partner open house'] },
+  'Phone enquiry': { sourceDetail: ['Called the office line', 'Returned a missed call'] }
+};
+// Leads someone added by hand (index in the seed list -> source they chose). Everything else is created from tracked clicks.
+const SEED_MANUAL_SOURCE = { 4: 'Personal referral', 9: 'Phone enquiry', 15: 'Walk-in', 21: 'Event', 27: 'Personal referral', 33: 'Phone enquiry', 38: 'Walk-in' };
+const SEED_MANUAL_NOTES = ['Enquired in person and asked for a quote.', 'Introduced by an existing customer; prefers a call after 4pm.', 'Called the office directly, details taken by phone.', 'Came through a partner event; follow up with the brochure.'];
+const SEED_LEAD_NOTES = ['Prefers to be contacted in the **afternoon**.', '**Quote request**\n- Two locations\n- Proposal due *Friday*\n- Follow up once it is out', 'Decision maker is travelling until next week.\n\n1. Check in on Monday\n2. Send the case study'];
+const SEED_OPP_NAMES = ['Starter package', 'Annual plan', 'Add-on service', 'Consultation package', 'Renewal', 'Premium upgrade'];
+
+// Small seeded generator so the mock data is identical on every load.
+function seedRng(seed) {
+  let a = seed;
+  return () => { a |= 0; a = a + 0x6D2B79F5 | 0; let t = Math.imul(a ^ a >>> 15, 1 | a); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; };
+}
+
+function seedData() {
+  const r = seedRng(20261110);
+  const pick = arr => arr[Math.floor(r() * arr.length)];
+  const weighted = pairs => { let x = r() * pairs.reduce((s, p) => s + p[1], 0); for (const [v, w] of pairs) { if ((x -= w) < 0) return v; } return pairs[0][0]; };
+  const DAY = 864e5, HOUR = 36e5, MIN = 6e4;
+  const now = Date.now();
+  const db = { users: SEED_USERS.map(u => ({ ...u })), leads: [], activities: [], opps: [], seq: 0 };
+  const act = (leadId, at, type, title, detail, meta) => db.activities.push({ id: 'a' + (++db.seq), seq: db.seq, leadId, at, type, title, detail: detail || '', by: null, meta: meta || null });
+
+  for (let i = 0; i < 42; i++) {
+    const id = 'L' + (1001 + i);
+    const first = SEED_FIRST[i % SEED_FIRST.length], last = SEED_LAST[(i * 7 + 3) % SEED_LAST.length];
+    const drawn = weighted([['Google Ads', 30], ['Meta Ads', 25], ['Organic Search', 19], ['Referral', 10], ['Direct', 9], ['Email', 7]]);
+    const source = SEED_MANUAL_SOURCE[i] || drawn;
+    const manual = i in SEED_MANUAL_SOURCE;
+    const createdAt = now - Math.floor((1 + r() * 110) * DAY) - Math.floor(r() * 8 * HOUR);
+    const pool = SEED_ATTR[source] || {};
+    const attribution = { sourceDetail: '', campaign: '', ad: '', keyword: '', landingPage: '', referrer: '', clickId: '' };
+    SOURCE_FIELDS[source].forEach(k => {
+      if (k === 'landingPage') attribution[k] = pick(SEED_PAGES.slice(0, 4));
+      else if (k === 'clickId') attribution[k] = (source === 'Google Ads' ? 'gclid-' : 'fbclid-') + 'placeholder-' + (4000 + Math.floor(r() * 5999));
+      else if (pool[k]) attribution[k] = pick(pool[k]);
+    });
+    const channelDrawn = source === 'Meta Ads' ? weighted([['WhatsApp', 7], ['Web form', 2], ['Phone call', 1]]) : weighted([['Web form', 4], ['WhatsApp', 3], ['Phone call', 2], ['Email', 1], ['Live chat', 1]]);
+    const contactChannel = { 'Walk-in': 'In person', 'Event': 'In person', 'Personal referral': 'Phone call', 'Phone enquiry': 'Phone call' }[source] || channelDrawn;
+    const status = weighted([['New', 22], ['Contacted', 20], ['Qualified', 20], ['Converted', 28], ['Lost', 10]]);
+    const assigneeId = i % 14 === 5 ? null : weighted([['u2', 4], ['u3', 4], ['u4', 3], ['u1', 1]]);
+    const hasEmail = contactChannel !== 'WhatsApp' && contactChannel !== 'Phone call' || r() < 0.5;
+    db.leads.push({
+      id, name: `${first} ${last}`,
+      email: hasEmail ? `${first}.${last}${i}`.toLowerCase().replace(/\s+/g, '') + '@example.com' : '',
+      phone: `+65 8000 ${1000 + i}`,
+      status, source, attribution, contactChannel, createdAt, assigneeId,
+      lostReason: status === 'Lost' ? LEAD_LOST_REASONS[i % LEAD_LOST_REASONS.length] : '', lostNote: '',
+      // The email and phone above are the primary ones. People can keep more here.
+      notes: i % 9 === 2 ? SEED_LEAD_NOTES[(i / 9 | 0) % SEED_LEAD_NOTES.length] : '',
+      emailLabel: 'Primary', phoneLabel: 'Primary', moreEmails: [], morePhones: [],
+      // 'tracked' leads were created automatically from click tracking, so their attribution is system-generated
+      origin: manual ? 'manual' : 'tracked',
+      fieldUpdated: Object.fromEntries(MERGE_FIELDS.map(f => [f, createdAt]))
+    });
+
+    // Tracked clicks come first; the conversation is what ties them to this contact.
+    let t = createdAt - Math.floor(r() * 9 * DAY) - 2 * HOUR;
+    const a = attribution;
+    const visit = visitMeta(source, a), t0 = t;
+    if (source === 'Google Ads' || source === 'Meta Ads') act(id, t, 'ad_click', `Clicked ${source} ad`, `${a.campaign} · ${a.ad}${a.keyword ? ` · “${a.keyword}”` : ''}`, visit);
+    else if (source === 'Organic Search') act(id, t, 'search', 'Arrived from organic search', `Searched “${a.keyword}”`, visit);
+    else if (source === 'Referral') act(id, t, 'referral', 'Arrived from a referral link', a.referrer, visit);
+    else if (source === 'Email') act(id, t, 'email_click', 'Clicked an email link', a.campaign, visit);
+    else if (source === 'Direct') act(id, t, 'direct', 'Visited the site directly', '', visit);
+    if (!manual) {
+      act(id, t + MIN, 'page_view', 'Viewed page', a.landingPage, { landing: true });
+      const views = 1 + Math.floor(r() * 4);
+      for (let v = 0; v < views; v++) {
+        t += Math.floor((createdAt - 10 * MIN - t) * r() * 0.6);
+        act(id, t, 'page_view', 'Viewed page', pick(SEED_PAGES));
+      }
+      // Some people come back by another route (organic search) before getting in touch. Index-based, so the random stream is unchanged.
+      if (i % 3 === 1 && source !== 'Organic Search') {
+        const kw = SEED_ATTR['Organic Search'].keyword[i % 3], back = { landingPage: SEED_PAGES[i % 4], keyword: kw };
+        const t2 = t0 + Math.floor((createdAt - t0) * (0.5 + (i % 4) * 0.1));
+        act(id, t2, 'search', 'Arrived from organic search', `Searched “${kw}”`, visitMeta('Organic Search', back));
+        act(id, t2 + MIN, 'page_view', 'Viewed page', back.landingPage, { landing: true });
+      }
+      act(id, createdAt - 3 * MIN, 'conversation_started', `Started a conversation via ${contactChannel}`, 'Earlier tracked clicks were matched to this contact.', { channel: contactChannel });
+      act(id, createdAt, 'lead_created', 'Lead created automatically', `Identified by ${hasEmail ? 'email' : 'phone number'}`);
+    } else {
+      // No tracked clicks: a person typed this lead in, so the timeline starts with them.
+      act(id, createdAt, 'lead_created', 'Lead added manually', `Source: ${source}`);
+      db.activities[db.activities.length - 1].by = SEED_USERS[i % 2 ? 0 : 1].name;
+      act(id, createdAt + HOUR, 'note', 'Note', pick(SEED_MANUAL_NOTES));
+      db.activities[db.activities.length - 1].by = SEED_USERS[i % 2 ? 0 : 1].name;
+    }
+
+    // Deals follow the lead's status so the seeded numbers add up.
+    const opp = (oStatus, offset) => {
+      const openedAt = Math.min(createdAt + Math.floor((1 + r() * 6) * DAY) + offset, now - HOUR);
+      const closedAt = Math.min(openedAt + Math.floor((2 + r() * 14) * DAY), now);
+      const value = (3 + Math.floor(r() * 58)) * 100;
+      if (oStatus === 'Open') r();   // an open deal used to draw an expected close date here; the draw stays so the sample data is unchanged
+      const o = { id: 'O' + (501 + db.opps.length), leadId: id, name: pick(SEED_OPP_NAMES), value, status: oStatus, lostReason: oStatus === 'Lost' ? DEAL_LOST_REASONS[db.opps.length % DEAL_LOST_REASONS.length] : '', lostNote: '', closeDate: oStatus === 'Open' ? '' : new Date(closedAt).toISOString().slice(0, 10), note: '', createdAt: openedAt };
+      db.opps.push(o);
+      act(id, openedAt, 'opp_created', 'Deal added', `${o.name} · S$${value.toLocaleString('en-SG')}`, { oppId: o.id });
+      if (oStatus === 'Won') act(id, closedAt, 'opp_won', 'Deal won', `${o.name} · S$${value.toLocaleString('en-SG')}`);
+      if (oStatus === 'Lost') act(id, closedAt, 'opp_lost', 'Deal lost', o.name);
+    };
+    if (status === 'Converted') { opp('Won', 0); if (r() < 0.4) opp('Won', 20 * DAY); if (r() < 0.3) opp('Open', 30 * DAY); }
+    if (status === 'Qualified') opp('Open', 0);
+    if (status === 'Lost' && r() < 0.6) opp('Lost', 0);
+    if (status === 'Contacted' && r() < 0.3) opp('Open', 0);
+  }
+  // A few leads with more than one email or phone number.
+  const withBoth = db.leads.filter(l => l.email && l.phone && !['L1007', 'L1013', 'L1019', 'L1031'].includes(l.id));
+  withBoth[2].moreEmails = [{ label: 'Work', value: 'work.' + withBoth[2].email }];
+  withBoth[5].morePhones = [{ label: 'Secondary', value: '+65 6000 5005' }];
+  withBoth[8].moreEmails = [{ label: 'Secondary', value: 'home.' + withBoth[8].email }]; withBoth[8].morePhones = [{ label: 'Office', value: '+65 6000 5008' }];
+  // Two possible duplicates, so the warning and the merge have something to show.
+  const L = i => db.leads[i];
+  L(12).phone = L(6).phone;                                   // same phone number, different name and email
+  if (!L(18).email) L(18).email = 'shared.contact@example.com';
+  L(30).email = L(18).email;                                  // same email address, different name and phone
+  // On the first pair the older lead was reassigned recently, so a merge keeps that assignee but the newer lead's other details.
+  const [older, newer] = L(6).createdAt <= L(12).createdAt ? [L(6), L(12)] : [L(12), L(6)];
+  older.assigneeId = 'u2'; newer.assigneeId = 'u3';
+  older.fieldUpdated.assigneeId = now - 2 * HOUR;
+  db.activities.push({ id: 'a' + (++db.seq), seq: db.seq, leadId: older.id, at: now - 2 * HOUR, type: 'assignee_changed', title: 'Assignee changed', detail: 'Unassigned → Priya Nair', by: SEED_USERS[0].name });
+  return db;
+}
+
+
+// ---- src/core.js ----
+// State, role scoping, routing, formatting, modal and toast.
+
+/* Icon registry — one icon, one meaning. Check this list before using an icon anywhere new;
+   if the meaning is different, add a new entry instead of reusing one.
+     users               Leads (nav)
+     target              Deal (nav, and "deal added" in the timeline)
+     user-cog            Users & roles (nav)
+     plus                Add a new record
+     pencil              Edit (buttons, and "details edited" in the timeline)
+     x                   Close a dialog
+     trash-2             Delete (leads, and removing an additional email or phone number)
+     triangle-alert      Warning (possible duplicate lead)
+     git-merge           Merge duplicate leads (button, and "leads merged" in the timeline)
+     inbox               Simulate an incoming lead (prototype toolbar)
+     arrow-left          Back to the list
+     search              Search a list
+     rotate-ccw          Reset prototype data
+     mouse-pointer-click Paid ad click
+     globe               Visit from organic search
+     link                Visit from a referral link
+     mail-open           Visit from an email link
+     corner-down-right   Direct visit
+     panel-top           Page view
+     message-circle      Conversation started
+     user-plus           Lead created
+     sticky-note         Note
+     refresh-cw          Status changed
+     user-check          Assignee changed
+     phone               Call a lead (button, and "call logged" in the timeline)
+     message-square-text Text (SMS) a lead (button, and "SMS logged" in the timeline)
+     messages-square     Message a lead on WhatsApp (button, and "WhatsApp logged" in the timeline)
+     send                Message a lead on Telegram (button, and "Telegram logged" in the timeline)
+     mail                Email a lead (button, and "email logged" in the timeline)
+     calendar            A meeting with a lead ("meeting logged" in the timeline)
+     calendar-range      Filter a list by date range
+     route               Customer journey summary
+     eye                 View only the key moments in a timeline (first touch, last touch, converted)
+     hand                A touch recorded by hand (walk-in, event, referral, phone enquiry)
+     chevron-down        Show or hide the pages browsed in a journey
+     chevron-left        Previous month (date picker)
+     chevron-right       Next month (date picker)
+     trophy              Deal won
+     circle-x            Deal lost */
+const ICONS = {
+  navLeads: 'users', opp: 'target', navUsers: 'user-cog',
+  add: 'plus', del: 'trash-2', warn: 'triangle-alert', merge: 'git-merge', inbox: 'inbox', merged: 'git-merge', edit: 'pencil', close: 'x', back: 'arrow-left', search: 'search', reset: 'rotate-ccw',
+  ad_click: 'mouse-pointer-click', search_visit: 'globe', referral: 'link', email_click: 'mail-open', direct: 'corner-down-right',
+  page_view: 'panel-top', conversation_started: 'message-circle', lead_created: 'user-plus', note: 'sticky-note',
+  status_changed: 'refresh-cw', assignee_changed: 'user-check', lead_updated: 'pencil',
+  callLead: 'phone', smsLead: 'message-square-text', whatsappLead: 'messages-square', telegramLead: 'send', emailLead: 'mail',
+  contact_call: 'phone', contact_sms: 'message-square-text', contact_whatsapp: 'messages-square', contact_telegram: 'send', contact_email: 'mail', contact_meeting: 'calendar', dateRange: 'calendar-range', prev: 'chevron-left', journey: 'route', focus: 'eye', recorded: 'hand', expand: 'chevron-down', next: 'chevron-right',
+  opp_created: 'target', opp_won: 'trophy', opp_lost: 'circle-x'
+};
+// Activity types that come from click tracking rather than from a user.
+const TRACKED_TYPES = ['ad_click', 'search', 'referral', 'email_click', 'direct', 'page_view'];
+
+let DB = seedData();
+const state = {
+  userId: 'u1',
+  ui: { q: '', status: '', source: '', assignee: '', oppStatus: '', dates: { leads: { preset: '', from: '', to: '' }, deals: { preset: '', from: '', to: '' } }, drpOpen: '', keyMoments: false, journeyOpen: [], drpDraft: { from: '', to: '', month: '', active: 'from' }, editing: false, selected: [] }
+};
+
+function icon(key) { return `<i data-lucide="${ICONS[key]}" aria-hidden="true"></i>`; }
+function activityIcon(type) { return icon(type === 'search' ? 'search_visit' : type); }
+function refreshIcons() { if (window.lucide) window.lucide.createIcons(); }
+
+// Renders the small subset of Markdown the notes field supports: **bold**, *italic*, ~~strike~~, `code`, # headings,
+// "- " / "* " bullets and "1. " numbered lists (indent two spaces to nest), and http(s) links. Everything is HTML-escaped first
+// and only the tags produced here are ever added, so nothing a person types can run as markup or script.
+function mdInline(raw) {
+  const codes = [];
+  let s = esc(raw).replace(/`([^`\n]+)`/g, (_, c) => { codes.push(c); return `\u0000${codes.length - 1}\u0000`; });
+  s = s.replace(/\*\*([^*\n]+?)\*\*/g, '<strong>$1</strong>')
+       .replace(/(^|[^*])\*([^*\s][^*\n]*?)\*(?!\*)/g, '$1<em>$2</em>')
+       .replace(/~~([^~\n]+?)~~/g, '<del>$1</del>')
+       .replace(/\bhttps?:\/\/[^\s<]+/g, u => { const tail = (u.match(/[.,;:!?)]+$/) || [''])[0], url = u.slice(0, u.length - tail.length); return `<a href="${url}" target="_blank" rel="noopener noreferrer">${url}</a>${tail}`; });
+  return s.replace(/\u0000(\d+)\u0000/g, (_, i) => `<code>${codes[i]}</code>`);
+}
+function mdHTML(text) {
+  const out = [], stack = [];   // stack of open lists: { tag, indent }
+  let para = [];
+  const flush = () => { if (para.length) { out.push(`<p>${para.map(mdInline).join('<br>')}</p>`); para = []; } };
+  const closeTo = indent => { while (stack.length && stack[stack.length - 1].indent >= indent) out.push(`</li></${stack.pop().tag}>`); };
+  String(text || '').replace(/\r\n?/g, '\n').split('\n').forEach(line => {
+    const item = line.match(/^(\s*)([-*\u2022]|\d+[.)])\s+(.*)$/), head = line.match(/^#{1,3}\s+(.*)$/);
+    if (item) {
+      flush();
+      const indent = item[1].replace(/\t/g, '  ').length, tag = /\d/.test(item[2]) ? 'ol' : 'ul';
+      while (stack.length && stack[stack.length - 1].indent > indent) out.push(`</li></${stack.pop().tag}>`);
+      const top = stack[stack.length - 1];
+      if (top && top.indent === indent && top.tag === tag) out.push('</li><li>');
+      else {
+        if (top && top.indent === indent) out.push(`</li></${stack.pop().tag}>`);   // same level, different list type
+        stack.push({ tag, indent }); out.push(`<${tag}><li>`);
+      }
+      out.push(mdInline(item[3]));
+    } else if (!line.trim()) { flush(); closeTo(0); }
+    else if (head) { flush(); closeTo(0); out.push(`<p class="md-h">${mdInline(head[1])}</p>`); }
+    else if (stack.length && /^\s+/.test(line)) out.push('<br>' + mdInline(line.trim()));   // a wrapped line inside a list item
+    else { closeTo(0); para.push(line); }
+  });
+  flush(); closeTo(0);
+  return out.join('');
+}
+
+function esc(s) {
+  return String(s == null ? '' : s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+}
+function fmtMoney(n) { return 'S$' + Number(n || 0).toLocaleString('en-SG', { maximumFractionDigits: 0 }); }
+function fmtDate(v) { return v ? new Date(v).toLocaleDateString('en-SG', { day: 'numeric', month: 'short', year: 'numeric' }) : '—'; }
+function fmtDateTime(v) { return new Date(v).toLocaleString('en-SG', { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit', hour12: false }); }
+function slug(s) { return String(s).toLowerCase().replace(/[^a-z0-9]+/g, '-'); }
+function pill(label) { return `<span class="pill pill-${slug(label)}">${esc(label)}</span>`; }
+function validEmail(s) { return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(s); }
+
+// ---- Users and role scoping -------------------------------------------------
+function me() { return DB.users.find(u => u.id === state.userId); }
+function isAdmin() { return me().role === 'admin'; }
+function userName(id) { const u = DB.users.find(x => x.id === id); return u ? u.name : 'Unassigned'; }
+
+// Every screen and total reads leads and deals through these two functions,
+// so a basic user never sees anything that is not assigned to them.
+function canSeeLead(l) { return isAdmin() || l.assigneeId === state.userId; }
+function visibleLeads() { return DB.leads.filter(canSeeLead); }
+function visibleOpps() { const ids = new Set(visibleLeads().map(l => l.id)); return DB.opps.filter(o => ids.has(o.leadId)); }
+
+// Lifetime value is never stored: it is the sum of the lead's Won deals.
+function ltvMap() {
+  const m = {};
+  DB.opps.forEach(o => { if (o.status === 'Won') m[o.leadId] = (m[o.leadId] || 0) + o.value; });
+  return m;
+}
+function leadLtv(id) { return ltvMap()[id] || 0; }
+
+// Matching keys for spotting the same person. Email ignores case; phone compares the last 8 digits, so
+// "+65 8000 1002", "6580001002" and "80001002" are the same number.
+function emailKey(e) { return String(e || '').trim().toLowerCase(); }
+// Every email and phone number a lead has: the primary first, then any additional ones.
+// Additional ones are { label, value } entries; the primary's title is emailLabel / phoneLabel. People can rename every title.
+const emailsOf = l => [l.email, ...(l.moreEmails || []).map(x => x.value)].filter(Boolean);
+const phonesOf = l => [l.phone, ...(l.morePhones || []).map(x => x.value)].filter(Boolean);
+const CONTACT_LABELS_DEFAULT = ['Primary', 'Secondary', 'Tertiary'];
+const defaultContactLabel = i => CONTACT_LABELS_DEFAULT[i] || 'Other';
+function phoneKey(p) { const d = String(p || '').replace(/\D/g, ''); return d.length >= 8 ? d.slice(-8) : ''; }
+// Marks a field as just updated, which is what a merge uses to decide which value is the latest.
+function stamp(l, field) { (l.fieldUpdated = l.fieldUpdated || {})[field] = Date.now(); }
+
+function logActivity(leadId, type, title, detail, meta) {
+  const entry = { id: 'a' + (++DB.seq), seq: DB.seq, leadId, at: Date.now(), type, title, detail: detail || '', by: me().name, meta: meta || null };
+  DB.activities.push(entry);
+  return entry;
+}
+
+// ---- Form helpers -----------------------------------------------------------
+function selectHTML(id, options, value, attrs = '') {
+  const opts = options.map(o => { const [v, label] = Array.isArray(o) ? o : [o, o]; return `<option value="${esc(v)}"${String(v) === String(value == null ? '' : value) ? ' selected' : ''}>${esc(label)}</option>`; }).join('');
+  return `<select class="select" id="${id}" ${attrs}>${opts}</select>`;
+}
+function fieldHTML(label, id, control, cls = '', hint = '', required = false) {
+  return `<div class="field ${cls}" data-field="${id}"><label class="field-label" for="${id}">${esc(label)}${required ? '<span class="field-req">Required</span>' : ''}</label>${control}${hint ? `<span class="field-hint">${esc(hint)}</span>` : ''}</div>`;
+}
+function inputHTML(id, value, attrs = '') { return `<input class="input" id="${id}" value="${esc(value)}" ${attrs}>`; }
+function val(id) { const el = document.getElementById(id); return el ? el.value.trim() : ''; }
+function assigneeOptions() { return [['', 'Unassigned'], ...DB.users.map(u => [u.id, u.name])]; }
+
+// ---- Modal and toast --------------------------------------------------------
+function openModal(title, body, foot, cls = '') {
+  document.getElementById('modal-root').innerHTML = `
+    <div class="modal-backdrop" onmousedown="if (event.target === this) closeModal()">
+      <div class="modal ${cls}" role="dialog" aria-modal="true" aria-label="${esc(title)}">
+        <div class="modal-head"><h2>${esc(title)}</h2><button class="btn btn-icon" onclick="closeModal()" aria-label="Close">${icon('close')}</button></div>
+        ${body}
+        <div class="modal-foot">${foot}</div>
+      </div>
+    </div>`;
+  refreshIcons();
+  const first = document.querySelector('.modal input, .modal select');
+  if (first) first.focus();
+}
+function closeModal() { document.getElementById('modal-root').innerHTML = ''; }
+document.addEventListener('keydown', e => { if (e.key === 'Escape') closeModal(); });
+
+let toastTimer;
+function toast(msg) {
+  const el = document.getElementById('toast');
+  el.textContent = msg;
+  el.classList.add('is-on');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => el.classList.remove('is-on'), 2600);
+}
+
+// ---- Routing ----------------------------------------------------------------
+function navigate(hash) { if (location.hash === hash) render(); else location.hash = hash; }
+
+function render() {
+  const [, page = 'leads', id] = location.hash.replace(/^#/, '').split('/');
+  let html;
+  if (page === 'leads' && id) html = leadDetailPage(id);
+  else if (page === 'deals') html = oppsPage();
+  else if (page === 'users') html = usersPage();
+  else html = leadsPage();
+  // A page returns null when the current user may not open it; it has already redirected.
+  if (html == null) return;
+  document.getElementById('rail').innerHTML = railHTML(page);
+  document.getElementById('view').innerHTML = html;
+  document.getElementById('devbar').innerHTML = devbarHTML();
+  refreshIcons();
+  leadSyncSelectAll();
+}
+
+function railHTML(page) {
+  const link = (p, key, label) => `<a class="rail-link${page === p ? ' is-active' : ''}" href="#/${p}"${page === p ? ' aria-current="page"' : ''}>${icon(key)}<span>${label}</span></a>`;
+  return `
+    <div class="rail-org"><strong>CRM Lite</strong><span>${esc(ORG_NAME)}</span></div>
+    ${link('leads', 'navLeads', 'Leads')}
+    ${link('deals', 'opp', 'Deals')}
+    ${isAdmin() ? link('users', 'navUsers', 'Users') : ''}
+    <div class="rail-me"><strong>${esc(me().name)}</strong><span>${isAdmin() ? 'Admin · All leads' : 'Basic user · Own leads'}</span></div>`;
+}
+
+
+// ---- src/daterange.js ----
+// Date range filter shared by the Leads and Deals lists: presets plus a custom From / To range.
+// A filter is { preset, from, to, n }. preset '' means all time; 'custom' uses from / to (YYYY-MM-DD, either may be blank); 'lastN' covers the last n days up to today.
+
+const DATE_PRESETS = [
+  ['today', 'Today'], ['yesterday', 'Yesterday'], ['week', 'This week'], ['lastWeek', 'Last week'],
+  ['month', 'This month'], ['lastMonth', 'Last month'], ['', 'All time']
+];
+// "Last N days up to today" is the one open-ended preset; n is kept on the filter.
+const LAST_DAYS_MAX = 3650;
+// Each list says which date it filters on, so the button can name it. A deal's date is when it closed, or when it was opened while it is still open.
+const DATE_FILTERS = { leads: { label: 'Created', refresh: () => leadRefreshResults() }, deals: { label: 'Date', refresh: () => render() } };
+
+const dateKey = d => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+// 'YYYY-MM-DD' as local midnight, so a deal closing "today" is today in the user's own time zone.
+const dateStart = s => { const [y, m, d] = s.split('-').map(Number); return new Date(y, m - 1, d).getTime(); };
+const dateNextDay = s => { const [y, m, d] = s.split('-').map(Number); return new Date(y, m - 1, d + 1).getTime(); };
+
+// The first and last day (inclusive, as YYYY-MM-DD) a filter covers. Either end may be '' when it is open.
+function dateSpan(f) {
+  if (!f.preset) return { from: '', to: '' };
+  if (f.preset === 'custom') return { from: f.from, to: f.to };
+  const t = new Date(), y = t.getFullYear(), m = t.getMonth(), d = t.getDate();
+  const day = (yy, mm, dd) => dateKey(new Date(yy, mm, dd));
+  const monday = d - ((t.getDay() + 6) % 7);   // weeks run Monday to Sunday
+  switch (f.preset) {
+    case 'today': return { from: day(y, m, d), to: day(y, m, d) };
+    case 'yesterday': return { from: day(y, m, d - 1), to: day(y, m, d - 1) };
+    case 'week': return { from: day(y, m, monday), to: day(y, m, monday + 6) };
+    case 'lastWeek': return { from: day(y, m, monday - 7), to: day(y, m, monday - 1) };
+    case 'month': return { from: day(y, m, 1), to: day(y, m + 1, 0) };
+    case 'lastN': return { from: day(y, m, d - (f.n - 1)), to: day(y, m, d) };
+    case 'lastMonth': return { from: day(y, m - 1, 1), to: day(y, m, 0) };
+  }
+  return { from: '', to: '' };
+}
+
+// True when a timestamp (ms) or a YYYY-MM-DD string falls inside the filter.
+function dateMatch(f, v) {
+  if (!f.preset) return true;
+  const { from, to } = dateSpan(f);
+  const t = typeof v === 'string' ? dateStart(v) : v;
+  return (!from || t >= dateStart(from)) && (!to || t < dateNextDay(to));
+}
+
+const dateShort = (s, withYear) => new Date(dateStart(s)).toLocaleDateString('en-SG', { day: 'numeric', month: 'short', ...(withYear ? { year: 'numeric' } : {}) });
+function dateSummary(f) {
+  if (!f.preset) return 'All time';
+  if (f.preset === 'lastN') return `Last ${f.n} ${f.n === 1 ? 'day' : 'days'}`;
+  if (f.preset !== 'custom') return DATE_PRESETS.find(p => p[0] === f.preset)[1];
+  if (f.from && f.to) return f.from === f.to ? dateShort(f.from, true) : `${dateShort(f.from, f.from.slice(0, 4) !== f.to.slice(0, 4))} – ${dateShort(f.to, true)}`;
+  return f.from ? `From ${dateShort(f.from, true)}` : `Until ${dateShort(f.to, true)}`;
+}
+
+// ---- Calendar ---------------------------------------------------------------
+const monthStart = (ym, add = 0) => { const [y, m] = ym.split('-').map(Number); return new Date(y, m - 1 + add, 1); };
+const monthKey = d => dateKey(d).slice(0, 7);
+function monthHTML(ym, draft) {
+  const first = monthStart(ym), lead = (first.getDay() + 6) % 7, days = new Date(first.getFullYear(), first.getMonth() + 1, 0).getDate();
+  const today = dateKey(new Date()), { from, to } = draft;
+  let cells = '<span></span>'.repeat(lead);
+  for (let d = 1; d <= days; d++) {
+    const k = `${ym}-${String(d).padStart(2, '0')}`;
+    const edge = k === from || k === to, inside = from && to && k > from && k < to;
+    const cls = ['drp-day', edge ? 'is-edge' : '', inside ? 'is-inside' : '', k === today ? 'is-today' : '', from && to && from !== to && k === from ? 'is-start' : '', from && to && from !== to && k === to ? 'is-end' : ''].join(' ');
+    cells += `<button class="${cls}" onclick="drpDay('${k}')" aria-label="${fmtDate(dateStart(k))}"${edge ? ' aria-pressed="true"' : ''}>${d}</button>`;
+  }
+  const head = first.toLocaleDateString('en-SG', { month: 'long', year: 'numeric' });
+  return `<div class="drp-month"><div class="drp-month-title">${head}</div>
+    <div class="drp-grid">${['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'].map(w => `<span class="drp-dow">${w}</span>`).join('')}${cells}</div></div>`;
+}
+
+function drpHTML(key) {
+  const f = state.ui.dates[key], cfg = DATE_FILTERS[key], open = state.ui.drpOpen === key, dr = state.ui.drpDraft;
+  const fieldBtn = (which, label) => `<button class="drp-field${dr.active === which ? ' is-active' : ''}" onclick="drpActive('${which}')" aria-label="${label} date"><span class="${dr[which] ? '' : 'muted'}">${dr[which] ? fmtDate(dateStart(dr[which])) : 'Select'}</span></button>`;
+  return `
+    <button class="btn drp-btn${f.preset ? ' is-active' : ''}" onclick="drpToggle('${key}')" aria-haspopup="dialog" aria-expanded="${open}">${icon('dateRange')}<span>${cfg.label}: ${esc(dateSummary(f))}</span></button>
+    ${open ? `<div class="drp-pop" role="dialog" aria-label="Filter by ${cfg.label.toLowerCase()}">
+      <div class="drp-side">
+        <div class="drp-presets">${DATE_PRESETS.map(([p, label]) => `<button class="${f.preset === p ? 'is-active' : ''}" onclick="drpPreset('${key}', '${p}')">${label}</button>`).join('')}</div>
+        <div class="drp-lastn${f.preset === 'lastN' ? ' is-active' : ''}"><label for="drp-n">Last</label><input class="input" type="number" id="drp-n" min="1" max="${LAST_DAYS_MAX}" step="1" value="${f.preset === 'lastN' ? f.n : 30}" onchange="drpLastN('${key}', this.value)" aria-label="Number of days"></div>
+      </div>
+      <div class="drp-custom">
+        <div class="drp-range">
+          <button class="btn btn-icon" onclick="drpMonth(-1)" aria-label="Previous month">${icon('prev')}</button>
+          <div class="drp-fields">${fieldBtn('from', 'From')}<span class="drp-dash" aria-hidden="true">–</span>${fieldBtn('to', 'To')}</div>
+          <button class="btn btn-icon" onclick="drpMonth(1)" aria-label="Next month">${icon('next')}</button>
+        </div>
+        <div class="drp-months">${monthHTML(dr.month, dr)}${monthHTML(monthKey(monthStart(dr.month, 1)), dr)}</div>
+        <button class="btn btn-primary drp-apply" onclick="drpApply('${key}')"${dr.from || dr.to ? '' : ' disabled'}>Apply range</button>
+      </div>
+    </div>` : ''}`;
+}
+// The wrapper is rebuilt as a whole, so the button label and the open state never disagree.
+function drpPaint(key) {
+  const el = document.getElementById('drp-' + key);
+  el.innerHTML = drpHTML(key);
+  refreshIcons();
+  const pop = el.querySelector('.drp-pop');
+  if (!pop) return;
+  // Keep the popover inside the window when the button sits near the right edge (phones, narrow toolbars).
+  const r = pop.getBoundingClientRect(), edge = 16;
+  if (r.right > innerWidth - edge) pop.style.left = (innerWidth - edge - r.right) + 'px';
+  if (pop.getBoundingClientRect().left < edge) pop.style.left = (edge - el.getBoundingClientRect().left) + 'px';
+}
+function drpToggle(key) {
+  if (state.ui.drpOpen === key) state.ui.drpOpen = '';
+  else {
+    // The calendar starts from the range already in force, so a preset's dates show up on it.
+    const { from, to } = dateSpan(state.ui.dates[key]);
+    state.ui.drpOpen = key;
+    state.ui.drpDraft = { from, to, month: (from || dateKey(new Date())).slice(0, 7), active: 'from' };
+  }
+  drpPaint(key);
+}
+function drpClose() { const k = state.ui.drpOpen; if (!k) return; state.ui.drpOpen = ''; if (document.getElementById('drp-' + k)) drpPaint(k); }
+function drpSet(key, f) { state.ui.dates[key] = f; state.ui.drpOpen = ''; DATE_FILTERS[key].refresh(); if (document.getElementById('drp-' + key)) drpPaint(key); }
+function drpPreset(key, preset) { drpSet(key, { preset, from: '', to: '' }); }
+// Whole numbers from 1 up; anything else is ignored rather than guessed at.
+function drpLastN(key, v) {
+  const n = Math.floor(Number(v));
+  if (!(n >= 1)) return;
+  drpSet(key, { preset: 'lastN', from: '', to: '', n: Math.min(n, LAST_DAYS_MAX) });
+}
+function drpActive(which) { state.ui.drpDraft.active = which; drpPaint(state.ui.drpOpen); }
+function drpMonth(n) { const dr = state.ui.drpDraft; dr.month = monthKey(monthStart(dr.month, n)); drpPaint(state.ui.drpOpen); }
+// First click sets the start, second sets the end. A day before the start restarts the range, so the two can never cross.
+function drpDay(k) {
+  const dr = state.ui.drpDraft;
+  if (dr.active === 'from') { dr.from = k; if (dr.to && dr.to < k) dr.to = ''; dr.active = 'to'; }
+  else if (dr.from && k < dr.from) { dr.from = k; dr.to = ''; }
+  else { dr.to = k; if (!dr.from) { dr.active = 'from'; } }
+  drpPaint(state.ui.drpOpen);
+}
+function drpApply(key) {
+  const { from, to } = state.ui.drpDraft;
+  if (from || to) drpSet(key, { preset: 'custom', from, to });
+}
+
+document.addEventListener('mousedown', e => { if (state.ui.drpOpen && !e.target.closest('.drp')) drpClose(); });
+document.addEventListener('keydown', e => { if (e.key === 'Escape') drpClose(); });
+
+
+// ---- src/opps.js ----
+// Deals list, and the deal editor shared with the lead page.
+
+function oppsPage() {
+  const opps = visibleOpps();
+  const total = s => opps.filter(o => o.status === s);
+  const sum = list => list.reduce((n, o) => n + o.value, 0);
+  const tile = s => `<div class="card tile"><div class="tile-label">${s}</div><div class="tile-value">${fmtMoney(sum(total(s)))}</div><div class="tile-note">${total(s).length} ${total(s).length === 1 ? 'deal' : 'deals'}</div></div>`;
+  return `
+    <header class="page-head">
+      <div><h1>Deals</h1><p class="sub">${isAdmin() ? 'Revenue logged against every lead' : 'Revenue logged against your leads'}</p></div>
+      <button class="btn btn-primary" onclick="oppOpen()">${icon('add')}Add deal</button>
+    </header>
+    <div class="tiles">${OPP_STATUSES.map(tile).join('')}</div>
+    <section class="card">
+      <div class="toolbar">
+        <div class="seg" role="group" aria-label="Filter by status">
+          ${['', ...OPP_STATUSES].map(s => `<button class="${state.ui.oppStatus === s ? 'is-active' : ''}" onclick="oppSetFilter('${s}')">${s || 'All'}</button>`).join('')}
+        </div>
+        <div class="drp" id="drp-deals">${drpHTML('deals')}</div>
+      </div>
+      ${oppsTableHTML(opps)}
+    </section>`;
+}
+
+function oppsTableHTML(opps) {
+  const rows = opps.filter(o => (!state.ui.oppStatus || o.status === state.ui.oppStatus) && dateMatch(state.ui.dates.deals, o.closeDate || o.createdAt)).sort((a, b) => b.createdAt - a.createdAt);
+  if (!rows.length) return `<div class="empty">${opps.length ? 'No deals match these filters.' : 'No deals yet. Add one to log revenue against a lead.'}</div>`;
+  const admin = isAdmin();
+  return `<div class="table-wrap"><table>
+    <thead><tr><th>Deal</th><th class="hide-sm">Lead</th><th class="hide-sm">Source</th>${admin ? '<th class="hide-sm">Assignee</th>' : ''}<th>Status</th><th class="hide-sm">Closed</th><th class="num">Value</th><th aria-label="Actions"></th></tr></thead>
+    <tbody>${rows.map(o => {
+      const l = DB.leads.find(x => x.id === o.leadId);
+      return `<tr>
+        <td><div class="cell-main">${esc(o.name)}</div>${o.status === 'Lost' && o.lostReason ? `<div class="cell-sub">Lost: ${esc(o.lostReason)}</div>` : ''}<a class="cell-sub show-sm" href="#/leads/${l.id}">${esc(l.name)}</a></td>
+        <td class="hide-sm"><a href="#/leads/${l.id}">${esc(l.name)}</a></td>
+        <td class="hide-sm">${pill(l.source)}</td>
+        ${admin ? `<td class="hide-sm">${esc(userName(l.assigneeId))}</td>` : ''}
+        <td>${pill(o.status)}</td>
+        <td class="hide-sm">${fmtDate(o.closeDate)}</td>
+        <td class="num">${fmtMoney(o.value)}</td>
+        <td class="num"><button class="btn btn-icon" onclick="oppOpen('${o.id}')" aria-label="Edit ${esc(o.name)}">${icon('edit')}</button></td>
+      </tr>`;
+    }).join('')}</tbody></table></div>`;
+}
+
+function oppSetFilter(s) { state.ui.oppStatus = s; render(); }
+
+// Opens the editor for an existing deal, or a new one. When leadId is given
+// (opened from a lead page) the lead is already known, so the Lead field is left out; otherwise the user picks one
+// (a new deal) or sees which lead it belongs to (an existing deal).
+// A draft puts back what was typed when the lost dialog is cancelled.
+function oppOpen(oppId, leadId, draft) {
+  const o = { ...(oppId ? DB.opps.find(x => x.id === oppId) : { leadId: leadId || '', name: '', value: '', status: 'Open', closeDate: '', note: '' }), ...draft };
+  const leads = visibleLeads().slice().sort((a, b) => a.name.localeCompare(b.name));
+  if (!leads.length) { toast('Add a lead first.'); return; }
+  const fixedLead = oppId || leadId, fromLead = !!leadId;
+  openModal(oppId ? 'Edit deal' : 'Add deal', `
+    <div class="form-grid">
+      ${fromLead ? `<input type="hidden" id="opp-lead" value="${esc(o.leadId)}">` : fieldHTML('Lead', 'opp-lead', selectHTML('opp-lead', leads.map(l => [l.id, l.name]), o.leadId, fixedLead ? 'disabled' : ''), 'span-2')}
+      ${fieldHTML('Deal name', 'opp-name', inputHTML('opp-name', o.name, 'placeholder="Annual plan" required aria-required="true"'), 'span-2', '', true)}
+      ${fieldHTML('Value (S$)', 'opp-value', inputHTML('opp-value', o.value, 'type="number" min="0" step="1" inputmode="decimal" required aria-required="true"'), 'span-2', '', true)}
+      <div class="span-2 opp-status-row">
+      ${fieldHTML('Status', 'opp-status', selectHTML('opp-status', OPP_STATUSES, o.status, `onchange="oppStatusChanged()"`), '', 'Only Won counts towards lifetime value.')}
+      ${fieldHTML('Close date', 'opp-close', inputHTML('opp-close', o.status === 'Open' ? '' : o.closeDate, 'type="date"'), o.status === 'Open' ? 'is-hidden' : '')}
+      </div>
+      ${fieldHTML('Note', 'opp-note', `<textarea class="textarea" id="opp-note">${esc(o.note)}</textarea>`, 'span-2')}
+    </div>
+    <p class="form-error" id="opp-error" role="alert"></p>`,
+    `${oppId ? `<button class="btn btn-danger" onclick="oppDelete('${oppId}')">Delete</button>` : ''}
+     <button class="btn" onclick="closeModal()">Cancel</button>
+     <button class="btn btn-primary" onclick="oppSave('${oppId || ''}')">${oppId ? 'Save' : 'Add deal'}</button>`);
+}
+
+// An open deal has no close date. The field appears once the deal is Won or Lost, starting at today, and goes when it is reopened.
+function oppStatusChanged() {
+  const closed = val('opp-status') !== 'Open', box = document.querySelector('[data-field="opp-close"]');
+  box.classList.toggle('is-hidden', !closed);
+  if (closed && !val('opp-close')) document.getElementById('opp-close').value = dateKey(new Date());
+}
+
+function oppSave(oppId) {
+  const status = val('opp-status');
+  const d = { leadId: val('opp-lead'), name: val('opp-name'), value: Number(val('opp-value')), status, closeDate: status === 'Open' ? '' : val('opp-close'), note: val('opp-note') };
+  const lead = visibleLeads().find(l => l.id === d.leadId);
+  const err = !lead ? 'Choose a lead.' : !d.name ? 'Give the deal a name.' : val('opp-value') === '' || !(d.value >= 0) ? 'Enter a value of 0 or more.' : '';
+  // A deal that is Won or Lost always has a close date; if it was cleared, it is the day it was marked.
+  if (!err && status !== 'Open' && !d.closeDate) d.closeDate = dateKey(new Date());
+  if (err) { document.getElementById('opp-error').textContent = err; return; }
+  const was = oppId ? DB.opps.find(x => x.id === oppId).status : null;
+  if (d.status === 'Lost' && was !== 'Lost') {
+    const fromLead = document.getElementById('opp-lead').type === 'hidden';
+    lostOpen({
+      title: 'Mark deal as lost',
+      intro: `${d.name} is closed as lost, so it adds nothing to ${lead.name}'s lifetime value. Say why, so your team can learn from it.`,
+      reasons: DEAL_LOST_REASONS,
+      apply: (reason, note) => oppCommit(oppId, d, { reason, note }),
+      cancel: () => oppOpen(oppId, fromLead ? d.leadId : '', d)
+    });
+    return;
+  }
+  oppCommit(oppId, d);
+}
+function oppCommit(oppId, d, lost) {
+  const lead = DB.leads.find(l => l.id === d.leadId);
+  // A lost reason is kept only while the deal is Lost.
+  if (d.status !== 'Lost') { d.lostReason = ''; d.lostNote = ''; } else if (lost) { d.lostReason = lost.reason; d.lostNote = lost.note; }
+  const label = `${d.name} · ${fmtMoney(d.value)}`;
+  let prev = null;
+  if (oppId) {
+    const o = DB.opps.find(x => x.id === oppId);
+    prev = o.status;
+    const edited = o.name !== d.name || o.value !== d.value || o.closeDate !== d.closeDate || o.note !== d.note;
+    Object.assign(o, d);
+    if (edited && prev === d.status) logActivity(lead.id, 'lead_updated', 'Deal edited', label);
+  } else {
+    const fresh = { id: 'O' + (501 + DB.opps.length) + '-' + DB.seq, ...d, createdAt: Date.now() };
+    DB.opps.push(fresh);
+    logActivity(lead.id, 'opp_created', 'Deal added', label, { oppId: fresh.id });
+  }
+  if (d.status !== prev) {
+    if (d.status === 'Won') logActivity(lead.id, 'opp_won', 'Deal won', label);
+    if (d.status === 'Lost') logActivity(lead.id, 'opp_lost', 'Deal lost', `${d.name}. ${lostText(d.lostReason, d.lostNote)}`);
+    if (d.status === 'Open' && prev) logActivity(lead.id, 'lead_updated', 'Deal reopened', d.name);
+    // A lead with won revenue has converted.
+    if (d.status === 'Won' && lead.status !== 'Converted') {
+      logActivity(lead.id, 'status_changed', 'Status changed', `${lead.status} → Converted`);
+      lead.status = 'Converted'; stamp(lead, 'status'); lead.lostReason = ''; lead.lostNote = '';
+    }
+  }
+  closeModal();
+  toast(oppId ? 'Deal saved' : 'Deal added');
+  render();
+}
+
+function oppDelete(oppId) {
+  const o = DB.opps.find(x => x.id === oppId);
+  if (!confirm(`Delete “${o.name}”? This removes its revenue from the lead.`)) return;
+  DB.opps = DB.opps.filter(x => x.id !== oppId);
+  logActivity(o.leadId, 'lead_updated', 'Deal deleted', `${o.name} · ${fmtMoney(o.value)}`);
+  closeModal();
+  toast('Deal deleted');
+  render();
+}
+
+
+// ---- src/leads.js ----
+// Leads list with the summary tiles, the add-lead dialog, and the lead page.
+
+// ---- Leads list -------------------------------------------------------------
+function leadsPage() {
+  const ui = state.ui, admin = isAdmin();
+  const leads = visibleLeads();
+  return `
+    <header class="page-head">
+      <div><h1>Leads</h1><p class="sub">${admin ? 'Every lead in the organisation' : 'Leads assigned to you'}</p></div>
+      <button class="btn btn-primary" onclick="leadOpenAdd()">${icon('add')}Add lead</button>
+    </header>
+    ${leadsSummaryHTML(leads)}
+    <section class="card">
+      <div class="toolbar">
+        <div class="search">${icon('search')}<input class="input" id="lead-q" placeholder="Search name, email or phone" value="${esc(ui.q)}" oninput="leadSetFilter('q', this.value)" aria-label="Search leads"></div>
+        ${selectHTML('lead-f-status', [['', 'All statuses'], ...LEAD_STATUSES], ui.status, `onchange="leadSetFilter('status', this.value)" aria-label="Filter by status"`)}
+        ${selectHTML('lead-f-source', [['', 'All sources'], ...LEAD_SOURCES], ui.source, `onchange="leadSetFilter('source', this.value)" aria-label="Filter by source"`)}
+        <div class="drp" id="drp-leads">${drpHTML('leads')}</div>
+        ${admin ? selectHTML('lead-f-assignee', [['', 'All assignees'], ['none', 'Unassigned'], ...DB.users.map(u => [u.id, u.name])], ui.assignee, `onchange="leadSetFilter('assignee', this.value)" aria-label="Filter by assignee"`) : ''}
+      </div>
+      <div id="lead-results">${leadsResultsHTML()}</div>
+    </section>`;
+}
+
+function leadsSummaryHTML(leads) {
+  const ltv = ltvMap();
+  const won = leads.reduce((s, l) => s + (ltv[l.id] || 0), 0);
+  const converted = leads.filter(l => l.status === 'Converted').length;
+  const tile = (label, value, note) => `<div class="card tile"><div class="tile-label">${label}</div><div class="tile-value">${value}</div><div class="tile-note">${note}</div></div>`;
+  return `
+    <div class="tiles">
+      ${tile('Leads', leads.length, 'All time')}
+      ${tile('Won revenue', fmtMoney(won), 'From won deals')}
+      ${tile('Converted', converted, leads.length ? `${Math.round(converted / leads.length * 100)}% of leads` : '—')}
+    </div>`;
+}
+
+// The line under the source pill. Manually added leads say so, because that is what decides whether they can be deleted.
+function sourceNote(l) {
+  const detail = l.attribution.sourceDetail || l.attribution.campaign;
+  return l.origin === 'manual' ? ['Added manually', detail].filter(Boolean).join(' · ') : detail;
+}
+
+function leadsFiltered() {
+  const ui = state.ui, q = ui.q.trim().toLowerCase();
+  return visibleLeads().filter(l =>
+    (!q || l.name.toLowerCase().includes(q) || emailsOf(l).some(e => e.includes(q)) || phonesOf(l).some(p => p.replace(/\s/g, '').includes(q.replace(/\s/g, '')))) &&
+    (!ui.status || l.status === ui.status) &&
+    (!ui.source || l.source === ui.source) &&
+    dateMatch(ui.dates.leads, l.createdAt) &&
+    (!ui.assignee || (ui.assignee === 'none' ? !l.assigneeId : l.assigneeId === ui.assignee))
+  ).sort((a, b) => b.createdAt - a.createdAt);
+}
+
+function leadsResultsHTML() {
+  const rows = leadsFiltered(), ltv = ltvMap(), admin = isAdmin();
+  // Only leads that are in view can stay selected, so a bulk action never touches rows the user can't see.
+  const inView = new Set(rows.map(l => l.id));
+  state.ui.selected = state.ui.selected.filter(id => inView.has(id));
+  const sel = new Set(state.ui.selected);
+  if (!rows.length) return `<div class="empty">${visibleLeads().length ? 'No leads match these filters.' : 'No leads are assigned to you yet.'}</div>`;
+  return `${bulkBarHTML(sel.size)}<div class="table-wrap"><table>
+    <thead><tr><th class="sel"><input type="checkbox" class="chk" id="lead-sel-all" onchange="leadToggleAll(this.checked)" aria-label="Select all leads shown"${sel.size === rows.length ? ' checked' : ''}></th><th>Lead</th><th class="hide-sm">Source</th><th class="hide-sm">Status</th>${admin ? '<th class="hide-sm">Assignee</th>' : ''}<th class="hide-sm">Created</th><th class="num">Lifetime value</th></tr></thead>
+    <tbody>${rows.map(l => `<tr class="is-link${sel.has(l.id) ? ' is-selected' : ''}" onclick="navigate('#/leads/${l.id}')">
+      <td class="sel" onclick="event.stopPropagation()"><input type="checkbox" class="chk" onchange="leadToggle('${l.id}', this.checked)" aria-label="Select ${esc(l.name)}"${sel.has(l.id) ? ' checked' : ''}></td>
+      <td><a class="cell-main" href="#/leads/${l.id}" onclick="event.stopPropagation()">${esc(l.name)}</a>${dupMap()[l.id] ? ' <span class="pill pill-duplicate">Possible duplicate</span>' : ''}<div class="cell-sub hide-sm">${esc(l.email || '—')}</div><div class="show-sm">${pill(l.source)} ${pill(l.status)}${l.origin === 'manual' ? '<div class="cell-sub">Added manually</div>' : ''}</div></td>
+      <td class="hide-sm">${pill(l.source)}${sourceNote(l) ? `<div class="cell-sub">${esc(sourceNote(l))}</div>` : ''}</td>
+      <td class="hide-sm">${pill(l.status)}</td>
+      ${admin ? `<td class="hide-sm${l.assigneeId ? '' : ' muted'}">${esc(userName(l.assigneeId))}</td>` : ''}
+      <td class="hide-sm">${fmtDate(l.createdAt)}</td>
+      <td class="num">${ltv[l.id] ? `<strong>${fmtMoney(ltv[l.id])}</strong>` : '<span class="muted">—</span>'}</td>
+    </tr>`).join('')}</tbody></table></div>
+    <div class="count">${rows.length} of ${visibleLeads().length} leads</div>`;
+}
+
+// ---- Bulk actions -----------------------------------------------------------
+// Assign and Delete are admin only. Anyone can change the status of leads they can see.
+// Only manually created leads can be deleted; the delete dialog says so when the selection includes others.
+function bulkBarHTML(n) {
+  if (!n) return '';
+  const admin = isAdmin();
+  return `<div class="bulk-bar" role="group" aria-label="Bulk actions"><strong>${n} selected</strong>
+    ${admin ? selectHTML('bulk-assign', [['', 'Assign to…'], ['none', 'Unassigned'], ...DB.users.map(u => [u.id, u.name])], '', `onchange="leadBulkAssign(this.value)" aria-label="Assign selected leads"`) : ''}
+    ${selectHTML('bulk-status', [['', 'Change status…'], ...LEAD_STATUSES], '', `onchange="leadBulkStatus(this.value)" aria-label="Change status of selected leads"`)}
+    ${admin ? `<button class="btn btn-delete" onclick="leadBulkDeleteAsk()">${icon('del')}Delete</button>` : ''}
+    <button class="btn" onclick="leadClearSel()">Clear</button>
+  </div>`;
+}
+const leadCount = n => `${n} ${n === 1 ? 'lead' : 'leads'}`;
+function selectedLeads() { return DB.leads.filter(l => state.ui.selected.includes(l.id) && canSeeLead(l)); }
+
+function leadRefreshResults() {
+  document.getElementById('lead-results').innerHTML = leadsResultsHTML();
+  refreshIcons();
+  leadSyncSelectAll();
+}
+// The header checkbox is half-filled when only some of the shown leads are selected.
+function leadSyncSelectAll() {
+  const box = document.getElementById('lead-sel-all');
+  if (box) box.indeterminate = state.ui.selected.length > 0 && !box.checked;
+}
+function leadToggle(id, on) {
+  const s = new Set(state.ui.selected);
+  if (on) s.add(id); else s.delete(id);
+  state.ui.selected = [...s];
+  leadRefreshResults();
+}
+function leadToggleAll(on) { state.ui.selected = on ? leadsFiltered().map(l => l.id) : []; leadRefreshResults(); }
+function leadClearSel() { state.ui.selected = []; leadRefreshResults(); }
+
+function leadBulkStatus(status) {
+  const leads = selectedLeads();
+  if (!status || !leads.length) return;
+  let n = 0;
+  if (status === 'Lost') {
+    const targets = leads.filter(l => l.status !== 'Lost');
+    if (!targets.length) { toast('Already Lost'); render(); return; }
+    leadsMarkLost(targets, true);
+    render();   // puts the dropdown back until the reason is confirmed
+    return;
+  }
+  leads.forEach(l => { if (l.status !== status) { leadApplyStatus(l, status); n++; } });
+  state.ui.selected = [];
+  toast(n ? `${leadCount(n)} changed to ${status}` : `Already ${status}`);
+  render();
+}
+function leadBulkAssign(value) {
+  const leads = selectedLeads();
+  if (!isAdmin() || !value || !leads.length) return;
+  const next = value === 'none' ? null : value;
+  let n = 0;
+  leads.forEach(l => { if (l.assigneeId !== next) { logActivity(l.id, 'assignee_changed', 'Assignee changed', `${userName(l.assigneeId)} → ${userName(next)}`); l.assigneeId = next; stamp(l, 'assigneeId'); n++; } });
+  state.ui.selected = [];
+  toast(n ? `${leadCount(n)} ${next ? `assigned to ${userName(next)}` : 'unassigned'}` : 'No change');
+  render();
+}
+function leadBulkDeleteAsk() {
+  const leads = selectedLeads();
+  if (!isAdmin() || !leads.length) return;
+  const manual = leads.filter(l => l.origin === 'manual'), n = leads.length, m = manual.length;
+  if (!m) {
+    openModal(`Can't delete ${leadCount(n)}`,
+      `<p><strong>Only manually created leads can be deleted.</strong> ${n === 1 ? "The selected lead wasn't" : `None of the ${n} selected leads were`} created manually, so nothing will be deleted.</p>`,
+      `<button class="btn btn-primary" onclick="closeModal()">OK</button>`);
+    return;
+  }
+  const ids = new Set(manual.map(l => l.id));
+  const opps = DB.opps.filter(o => ids.has(o.leadId)), won = opps.filter(o => o.status === 'Won').reduce((t, o) => t + o.value, 0);
+  const warning = m < n ? `<p><strong>Only manually created leads can be deleted.</strong> ${m} of the ${n} selected leads ${m === 1 ? 'is' : 'are'} manually created, so only ${m === 1 ? 'that one' : `those ${m}`} will be deleted. The other ${n - m} will be kept.</p>` : '';
+  openModal(`Delete ${leadCount(m)}?`,
+    `${warning}<p>This permanently removes ${m === 1 ? 'this lead' : 'these leads'}, ${opps.length} ${opps.length === 1 ? 'deal' : 'deals'} (${fmtMoney(won)} won revenue) and their timelines. It can't be undone.</p>`,
+    `<button class="btn" onclick="closeModal()">Cancel</button><button class="btn btn-delete" onclick="leadBulkDeleteDo()">Delete ${leadCount(m)}</button>`);
+}
+function leadBulkDeleteDo() {
+  if (!isAdmin()) return;
+  const ids = new Set(selectedLeads().filter(l => l.origin === 'manual').map(l => l.id));
+  DB.leads = DB.leads.filter(l => !ids.has(l.id));
+  DB.opps = DB.opps.filter(o => !ids.has(o.leadId));
+  DB.activities = DB.activities.filter(a => !ids.has(a.leadId));
+  state.ui.selected = [];
+  closeModal();
+  toast(`${leadCount(ids.size)} deleted`);
+  render();
+}
+
+// Filters refresh only the results, so the search box keeps focus while typing.
+function leadSetFilter(key, value) {
+  state.ui[key] = value;
+  leadRefreshResults();
+}
+
+// ---- Attribution fields (shared by the add dialog and the lead page) --------
+function attrFieldsHTML(prefix, source, attr) {
+  return ATTR_FIELDS.map(f => `<div class="field" data-attr="${f.key}"${SOURCE_FIELDS[source].includes(f.key) ? '' : ' hidden'}><label class="field-label" for="${prefix}-${f.key}">${f.label}</label>${inputHTML(`${prefix}-${f.key}`, attr[f.key] || '')}</div>`).join('');
+}
+// Shows only the attribution fields that apply to the chosen source.
+function attrToggle(prefix, source) {
+  ATTR_FIELDS.forEach(f => { document.getElementById(`${prefix}-${f.key}`).closest('.field').hidden = !SOURCE_FIELDS[source].includes(f.key); });
+}
+function attrRead(prefix, source) {
+  const a = {};
+  ATTR_FIELDS.forEach(f => { a[f.key] = SOURCE_FIELDS[source].includes(f.key) ? val(`${prefix}-${f.key}`) : ''; });
+  return a;
+}
+function leadValidate(d, exceptId) {
+  if (!d.name) return 'Enter a name.';
+  if (!d.email && !d.phone) return 'Enter an email or a phone number.';
+  if (d.email && !validEmail(d.email)) return 'Enter a valid email address.';
+  if (d.moreEmails.length && !d.email) return 'Add a primary email before adding more.';
+  if (d.morePhones.length && !d.phone) return 'Add a primary phone number before adding more.';
+  if (d.moreEmails.some(e => !validEmail(e.value))) return 'Enter a valid additional email address.';
+  return '';
+}
+
+// Emails and phone numbers. With one value it is a plain field plus an "Add another" button. Once a second is added the field becomes a
+// list headed "Emails" (or "Phone numbers"): each row is an editable title and its value, starting with Primary, then Secondary.
+// The first row is always the primary one.
+const CONTACT_KINDS = {
+  email: { head: 'Emails', single: 'Email', type: 'email', add: 'Add another email' },
+  phone: { head: 'Phone numbers', single: 'Phone', type: 'tel', add: 'Add another phone number' }
+};
+function contactEditHTML(prefix, kind, st) {
+  const k = CONTACT_KINDS[kind], id = `${prefix}-${kind}`;
+  const addBtn = `<button type="button" class="btn btn-more" onclick="contactAdd('${prefix}', '${kind}')">${icon('add')}${k.add}</button>`;
+  if (!st.more.length && !st.expanded) {
+    return `<div class="field span-2 ce" id="${id}-ce" data-label="${esc(st.label)}"><label class="field-label" for="${id}">${k.single}</label>${inputHTML(id, st.value, `type="${k.type}"`)}${addBtn}</div>`;
+  }
+  const row = (label, value, primary, n) => `<div class="ce-row"><input class="input ce-label" value="${esc(label)}" aria-label="${k.single} ${n} title">
+    <input class="input ce-value"${primary ? ` id="${id}"` : ''} type="${k.type}" value="${esc(value)}" aria-label="${k.single} ${n}">
+    ${primary ? '<span class="ce-gap"></span>' : `<button type="button" class="btn btn-icon" onclick="contactRemove(this)" aria-label="Remove ${k.single.toLowerCase()} ${n}">${icon('del')}</button>`}</div>`;
+  return `<div class="field span-2 ce ce-multi" id="${id}-ce"><div class="field-label">${k.single}</div>
+    ${row(st.label, st.value, true, 1)}${st.more.map((m, i) => row(m.label, m.value, false, i + 2)).join('')}${addBtn}</div>`;
+}
+// What the editor currently shows, read back from the page.
+function contactState(prefix, kind) {
+  const box = document.getElementById(`${prefix}-${kind}-ce`);
+  if (!box.classList.contains('ce-multi')) return { label: box.dataset.label, value: val(`${prefix}-${kind}`), more: [] };
+  const rows = [...box.querySelectorAll('.ce-row')].map(r => ({ label: r.querySelector('.ce-label').value.trim(), value: r.querySelector('.ce-value').value.trim() }));
+  return { label: rows[0].label, value: rows[0].value, more: rows.slice(1), expanded: true };
+}
+function contactAdd(prefix, kind) {
+  const st = contactState(prefix, kind);
+  if (!st.label) st.label = defaultContactLabel(0);
+  st.more.push({ label: defaultContactLabel(st.more.length + 1), value: '' });
+  st.expanded = true;
+  document.getElementById(`${prefix}-${kind}-ce`).outerHTML = contactEditHTML(prefix, kind, st);
+  refreshIcons();
+  document.getElementById(`${prefix}-${kind}-ce`).querySelector('.ce-row:last-of-type .ce-value').focus();
+}
+function contactRemove(btn) { btn.closest('.ce-row').remove(); }
+// Blank rows are dropped, and so are repeats of the primary or of each other. A blank title falls back to its default.
+function contactRead(prefix, kind) {
+  const st = contactState(prefix, kind), key = kind === 'email' ? emailKey : p => phoneKey(p) || p.trim();
+  const fix = v => kind === 'email' ? v.toLowerCase() : v;
+  const seen = new Set([key(st.value)]), more = [];
+  st.more.forEach(m => { if (m.value && !seen.has(key(m.value))) { seen.add(key(m.value)); more.push({ label: m.label || defaultContactLabel(more.length + 1), value: fix(m.value) }); } });
+  return { label: st.label || 'Primary', value: fix(st.value), more };
+}
+
+// ---- Add lead ---------------------------------------------------------------
+function leadOpenAdd() {
+  const admin = isAdmin();
+  openModal('Add lead', `
+    <div class="form-grid">
+      ${fieldHTML('Name', 'nl-name', inputHTML('nl-name', '', 'required aria-required="true"'), 'span-2', '', true)}
+      ${fieldHTML('Email', 'nl-email', inputHTML('nl-email', '', 'type="email"'))}
+      ${fieldHTML('Phone', 'nl-phone', inputHTML('nl-phone', '', 'type="tel"'))}
+      ${fieldHTML('Status', 'nl-status', selectHTML('nl-status', LEAD_STATUSES.filter(s => s !== 'Lost'), 'New'))}
+      ${fieldHTML('Assignee', 'nl-assignee', selectHTML('nl-assignee', admin ? assigneeOptions() : [[state.userId, me().name]], state.userId, admin ? '' : 'disabled'), '', admin ? '' : 'Leads you add are assigned to you.')}
+    </div>
+    <div class="form-section">Where did this lead come from?</div>
+    <div class="form-grid">
+      ${fieldHTML('Source', 'nl-source', selectHTML('nl-source', MANUAL_SOURCES, 'Personal referral', `onchange="attrToggle('nl', this.value)"`))}
+      ${fieldHTML('Contacted us via', 'nl-channel', selectHTML('nl-channel', CONTACT_CHANNELS, 'Phone call'))}
+      ${attrFieldsHTML('nl', 'Personal referral', {})}
+    </div>
+    <p class="form-error" id="nl-error" role="alert"></p>`,
+    `<button class="btn" onclick="closeModal()">Cancel</button><button class="btn btn-primary" onclick="leadSaveNew()">Add lead</button>`);
+}
+
+function leadSaveNew() {
+  const source = val('nl-source');
+  const d = {
+    name: val('nl-name'), email: val('nl-email').toLowerCase(), phone: val('nl-phone'), status: val('nl-status'), source,
+    notes: '', emailLabel: 'Primary', phoneLabel: 'Primary', moreEmails: [], morePhones: [],
+    attribution: attrRead('nl', source), contactChannel: val('nl-channel'),
+    // Basic users can only create leads for themselves, whatever the form says.
+    assigneeId: isAdmin() ? (val('nl-assignee') || null) : state.userId
+  };
+  const err = leadValidate(d);
+  if (err) { document.getElementById('nl-error').textContent = err; return; }
+  const id = 'L' + (1001 + DB.leads.length) + '-' + (++DB.seq);
+  const now = Date.now();
+  DB.leads.push({ id, ...d, origin: 'manual', createdAt: now, fieldUpdated: Object.fromEntries(MERGE_FIELDS.map(f => [f, now])) });
+  logActivity(id, 'lead_created', 'Lead added manually', `Source: ${source}`);
+  closeModal();
+  toast(duplicatesOf(DB.leads.at(-1)).length ? 'Lead added. It may be a duplicate.' : 'Lead added');
+  navigate('#/leads/' + id);
+}
+
+// ---- Lead page --------------------------------------------------------------
+function leadDetailPage(id) {
+  const l = DB.leads.find(x => x.id === id);
+  if (!l || !canSeeLead(l)) { toast('That lead is not available to you.'); location.replace('#/leads'); return null; }
+  const editing = state.ui.editing, admin = isAdmin();
+  const opps = DB.opps.filter(o => o.leadId === id).sort((a, b) => b.createdAt - a.createdAt);
+  const ltv = leadLtv(id);
+  const row = (label, value) => `<dt>${label}</dt><dd>${value}</dd>`;
+  const text = v => v ? esc(v) : '<span class="muted">—</span>';
+  // One value is a plain row. With more, the plain label ("Phone") stands alone and each value gets its own row beneath it:
+  // the title (Primary, Secondary, ...) in the label column with a bar beside the group, and only the number in the value column.
+  const contactRows = (single, label, primary, more = []) => more.length
+    ? `<dt class="head">${single}</dt><div class="kv-sub">${[{ label, value: primary }, ...more].map(x => `<dt>${esc(x.label)}</dt><dd>${text(x.value)}</dd>`).join('')}</div>`
+    : row(single, text(primary));
+
+  // How the lead came in is fixed once the lead exists, so these rows are read-only, in edit mode too.
+  // Lead source is the first touch (see the journey); "Contacted us via" is the channel they got in touch on.
+  const sourceRows = `${row('Lead source', pill(l.source))}${row('Contacted us via', text(l.contactChannel))}`;
+  const details = editing ? `
+    <div class="form-grid">
+      ${fieldHTML('Name', 'le-name', inputHTML('le-name', l.name, 'required aria-required="true"'), 'span-2', '', true)}
+      ${contactEditHTML('le', 'email', { label: l.emailLabel || 'Primary', value: l.email, more: l.moreEmails || [] })}
+      ${contactEditHTML('le', 'phone', { label: l.phoneLabel || 'Primary', value: l.phone, more: l.morePhones || [] })}
+    </div>
+    <dl class="kv" style="margin-top:16px">${sourceRows}</dl>` : `
+    <dl class="kv">
+      ${row('Name', esc(l.name))}
+      ${contactRows('Email', l.emailLabel || 'Primary', l.email, l.moreEmails)}
+      ${contactRows('Phone', l.phoneLabel || 'Primary', l.phone, l.morePhones)}
+      ${sourceRows}
+    </dl>`;
+
+  const view = timelineView(id);
+
+  return `
+    <a class="back" href="#/leads">${icon('back')}Leads</a>
+    <header class="page-head">
+      <div class="lead-head"><h1>${esc(l.name)}</h1>${pill(l.status)}</div>
+    </header>
+    ${dupBannerHTML(l)}
+    ${contactBarHTML(l)}
+    ${leadStatsHTML(l, ltv, editing)}
+    <p class="form-error" id="le-error" role="alert" style="margin:-8px 0 16px"></p>
+    <div class="grid-2">
+      <div>
+        <section class="card"><div class="card-head"><h2>Details</h2>
+          <div class="head-actions">${editing
+            ? `<button class="btn" onclick="leadEdit(false)">Cancel</button><button class="btn btn-primary" onclick="leadSave('${id}')">Save changes</button>`
+            : `<button class="btn" onclick="leadEdit(true)">${icon('edit')}Edit</button>`}</div>
+        </div>${details}</section>
+        <section class="card">
+          <div class="card-head"><h2>Deals</h2><button class="btn" onclick="oppOpen('', '${id}')">${icon('add')}Add</button></div>
+          ${opps.length ? opps.map(o => `<div class="opp-row">
+              <div><div class="cell-main opp-title"><span>${esc(o.name)}</span>${pill(o.status)}</div><div class="cell-sub">${o.status === 'Open' ? 'Opened ' + fmtDate(o.createdAt) : 'Closed ' + fmtDate(o.closeDate)}${o.status === 'Lost' && o.lostReason ? ` · ${esc(o.lostReason)}` : ''}${o.note ? ` · ${esc(o.note)}` : ''}</div></div>
+              <span class="num"><strong>${fmtMoney(o.value)}</strong></span>
+              <button class="btn btn-icon" onclick="oppOpen('${o.id}', '${id}')" aria-label="Edit ${esc(o.name)}">${icon('edit')}</button>
+            </div>`).join('') + `<div class="opp-total"><span>Lifetime value (won)</span><span>${fmtMoney(ltv)}</span></div>`
+            : '<div class="empty">No deals yet. Add one to log revenue from this lead.</div>'}
+        </section>
+        ${leadNotesHTML(l)}
+      </div>
+      <section class="card">
+        <div class="card-head">
+          <div><h2>Timeline</h2><div class="muted" id="tl-count">${view.count}</div></div>
+          <button class="btn" onclick="leadActivityOpen('${id}')">${icon('add')}Add activity</button>
+        </div>
+        ${journeySummaryHTML(id)}
+        <ol class="timeline" id="timeline">${view.html}</ol>
+      </section>
+    </div>`;
+}
+
+// What created the lead: the conversation or form they got in touch on, or a person adding it by hand. Not "click tracking",
+// which only explains where they came from before that.
+const CREATED_FROM = { 'WhatsApp': 'From a WhatsApp conversation', 'Phone call': 'From a phone call', 'Web form': 'From a web form', 'Email': 'From an email', 'Live chat': 'From a live chat' };
+function createdFrom(l) { return l.origin === 'manual' ? 'Added manually' : CREATED_FROM[l.contactChannel] || 'From an enquiry'; }
+
+// Status, owner, revenue and age sit above the cards, apart from the contact details. Status and assignee save straight away.
+function leadStatsHTML(l, ltv, editing) {
+  const lock = editing ? ' disabled title="Save or cancel your edits first"' : '';
+  const wonCount = DB.opps.filter(o => o.leadId === l.id && o.status === 'Won').length;
+  const tile = (label, body, note) => `<div class="card tile"><div class="tile-label">${label}</div><div class="tile-body">${body}</div><div class="tile-note">${note || '&nbsp;'}</div></div>`;
+  const assignee = isAdmin()
+    ? selectHTML('lead-assignee', assigneeOptions(), l.assigneeId, `onchange="leadAssign('${l.id}', this.value)" aria-label="Assignee"${lock}`)
+    : `<div class="tile-value">${l.assigneeId ? esc(userName(l.assigneeId)) : '<span class="muted">Unassigned</span>'}</div>`;
+  return `<div class="lead-stats">
+    ${tile('Status', selectHTML('lead-status', LEAD_STATUSES, l.status, `onchange="leadSetStatus('${l.id}', this.value)" aria-label="Status"${lock}`), l.status === 'Lost' && l.lostReason ? `Reason: ${esc(l.lostReason)}${l.lostNote ? `<br>\u201c${esc(l.lostNote)}\u201d` : ''}` : 'Updates straight away')}
+    ${tile('Assignee', assignee, isAdmin() ? 'Updates straight away' : '')}
+    ${tile('Lifetime value', `<div class="tile-value">${fmtMoney(ltv)}</div>`, plural(wonCount, 'won deal', 'won deals'))}
+    ${tile('Created', `<div class="tile-value">${fmtDate(l.createdAt)}</div>`, createdFrom(l))}
+  </div>`;
+}
+
+// Changing the status is its own action and saves straight away.
+function leadSetStatus(id, status) {
+  const l = DB.leads.find(x => x.id === id);
+  if (!l || l.status === status || !LEAD_STATUSES.includes(status)) return;
+  if (status === 'Lost') { leadsMarkLost([l], false); render(); return; }   // render puts the dropdown back until the reason is confirmed
+  leadApplyStatus(l, status);
+  toast(`Status set to ${status}`);
+  render();
+}
+
+// Sets a status and logs it. A lost reason is kept only while the lead is Lost.
+function leadApplyStatus(l, status, lost) {
+  logActivity(l.id, 'status_changed', 'Status changed', `${l.status} → ${status}${lost ? `. ${lostText(lost.reason, lost.note)}` : ''}`);
+  l.status = status; stamp(l, 'status');
+  l.lostReason = lost ? lost.reason : ''; l.lostNote = lost ? lost.note : '';
+}
+function leadsMarkLost(leads, bulk) {
+  const n = leads.length;
+  lostOpen({
+    title: n === 1 ? 'Mark lead as lost' : `Mark ${n} leads as lost`,
+    intro: n === 1 ? `${leads[0].name} stays in your list as Lost. Say why, so your team can learn from it.` : `These ${n} leads stay in your list as Lost. Say why, so your team can learn from it.`,
+    reasons: LEAD_LOST_REASONS,
+    apply: (reason, note) => {
+      leads.forEach(l => leadApplyStatus(l, 'Lost', { reason, note }));
+      if (bulk) state.ui.selected = [];
+      toast(n === 1 ? 'Status set to Lost' : `${leadCount(n)} changed to Lost`);
+      render();
+    }
+  });
+}
+
+// Clicking a contact button still opens the user's app, and then logs the contact on the timeline and asks for a note.
+// Contact buttons open the user's own app (phone, messages, email) or the web link for WhatsApp / Telegram.
+// Phone numbers are reduced to digits, so +65 8000 1002 becomes 6580001002. A button is disabled when the lead lacks that detail.
+function contactBarHTML(l) {
+  const digits = l.phone.replace(/\D/g, '');
+  const phone = digits.length >= 7 ? digits : '';
+  const email = validEmail(l.email) ? l.email : '';
+  const items = [
+    { kind: 'call', key: 'callLead', label: 'Call', href: phone && `tel:+${phone}`, need: 'phone number' },
+    { kind: 'sms', key: 'smsLead', label: 'SMS', href: phone && `sms:+${phone}`, need: 'phone number' },
+    { kind: 'whatsapp', key: 'whatsappLead', label: 'WhatsApp', href: phone && `https://wa.me/${phone}`, need: 'phone number', web: true },
+    { kind: 'telegram', key: 'telegramLead', label: 'Telegram', href: phone && `https://t.me/+${phone}`, need: 'phone number', web: true },
+    { kind: 'email', key: 'emailLead', label: 'Email', href: email && `mailto:${encodeURIComponent(email).replace(/%40/g, '@')}`, need: 'email address' }
+  ];
+  return `<div class="contact-bar" role="group" aria-label="Contact ${esc(l.name)}">${items.map(i => i.href
+    ? `<a class="btn" href="${esc(i.href)}"${i.web ? ' target="_blank" rel="noopener noreferrer"' : ''} onclick="leadContactClicked('${i.kind}', '${l.id}')">${icon(i.key)}${i.label}</a>`
+    : `<span class="btn" role="link" aria-disabled="true" title="No ${i.need} on this lead">${icon(i.key)}${i.label}</span>`).join('')}</div>`;
+}
+
+const CONTACT_LABELS = { call: 'Call', sms: 'SMS', whatsapp: 'WhatsApp', telegram: 'Telegram', email: 'Email', meeting: 'Meeting' };
+// Waits a moment so the browser can finish opening the link before the page re-renders.
+function leadContactClicked(kind, id) { setTimeout(() => leadContactLog(kind, id), 150); }
+function leadContactLog(kind, id) {
+  const l = DB.leads.find(x => x.id === id);
+  if (!l || !canSeeLead(l) || !CONTACT_LABELS[kind]) return;
+  const title = `${CONTACT_LABELS[kind]} logged`;
+  const entry = logActivity(id, 'contact_' + kind, title, '');
+  render();
+  openModal(title, `
+    <p class="muted" style="margin-bottom:14px">${esc(l.name)} · ${esc(kind === 'email' ? l.email : l.phone)}. This is now on the timeline.</p>
+    ${fieldHTML('Note', 'contact-note', `<textarea class="textarea" id="contact-note" rows="3" maxlength="1000" placeholder="What happened? (optional)" oninput="document.getElementById('contact-save').disabled = !this.value.trim()" onkeydown="if ((event.metaKey || event.ctrlKey) && event.key === 'Enter') leadContactSaveNote('${entry.id}')"></textarea>`)}`,
+    `<button class="btn" onclick="closeModal()">Skip</button><button class="btn btn-primary" id="contact-save" onclick="leadContactSaveNote('${entry.id}')" disabled>Save note</button>`);
+}
+// "Add activity" in the timeline: log a note, or a call, message, email or meeting that happened outside the app.
+function leadActivityOpen(id) {
+  const l = DB.leads.find(x => x.id === id);
+  if (!l || !canSeeLead(l)) return;
+  openModal('Add activity', `
+    <div class="form-grid">
+      ${fieldHTML('Type', 'act-type', selectHTML('act-type', [['note', 'Note'], ...Object.entries(CONTACT_LABELS)], 'note'), 'span-2')}
+      ${fieldHTML('Note', 'act-note', `<textarea class="textarea" id="act-note" rows="4" maxlength="1000" placeholder="What happened?" onkeydown="if ((event.metaKey || event.ctrlKey) && event.key === 'Enter') leadActivitySave('${id}')"></textarea>`, 'span-2', 'Required for a note, optional for everything else.')}
+    </div>
+    <p class="form-error" id="act-error" role="alert"></p>`,
+    `<button class="btn" onclick="closeModal()">Cancel</button><button class="btn btn-primary" onclick="leadActivitySave('${id}')">Add activity</button>`);
+}
+function leadActivitySave(id) {
+  const l = DB.leads.find(x => x.id === id), kind = val('act-type'), note = val('act-note');
+  if (!l || !canSeeLead(l)) return;
+  if (kind !== 'note' && !CONTACT_LABELS[kind]) return;
+  if (kind === 'note' && !note) { document.getElementById('act-error').textContent = 'Write a note.'; return; }
+  if (kind === 'note') logActivity(id, 'note', 'Note', note);
+  else logActivity(id, 'contact_' + kind, `${CONTACT_LABELS[kind]} logged`, note);
+  closeModal();
+  toast(kind === 'note' ? 'Note added' : `${CONTACT_LABELS[kind]} logged`);
+  render();
+}
+
+function leadContactSaveNote(entryId) {
+  const entry = DB.activities.find(a => a.id === entryId), note = val('contact-note');
+  if (!entry || !note) return;
+  entry.detail = note;
+  closeModal();
+  toast('Note saved');
+  render();
+}
+
+function leadEventHTML(e, tag) {
+  return `<li class="tl-item">
+    <span class="tl-icon">${activityIcon(e.type)}</span>
+    <div>
+      <div class="tl-title">${esc(e.title)}${TRACKED_TYPES.includes(e.type) ? ' <span class="pill pill-tracked">Tracked</span>' : ''}${tag ? ' ' + pill(tag) : ''}</div>
+      ${e.detail ? `<div class="tl-detail${e.type === 'note' || e.type.startsWith('contact_') ? ' tl-note' : ''}">${esc(e.detail)}</div>` : ''}
+      <div class="tl-meta">${fmtDateTime(e.at)}${e.by ? ` · ${esc(e.by)}` : ''}</div>
+    </div>
+  </li>`;
+}
+
+// A free-text notes field for anything that doesn't fit elsewhere. The box is always there: clicking it makes it active (blue outline)
+// and it saves when you click away (Esc discards, Ctrl/Cmd+Enter saves). Formatting is rendered while the box is not active,
+// because a textarea can only show the raw text.
+const NOTES_PLACEHOLDER = 'Anything worth remembering about this lead';
+function leadNotesBodyHTML(l) {
+  const open = `onclick="if (!event.target.closest('a')) leadNotesOpen('${l.id}')" onkeydown="if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); leadNotesOpen('${l.id}'); }"`;
+  return `<div class="notes-text${l.notes ? '' : ' is-empty'}" tabindex="0" role="button" aria-label="Notes" ${open}>${l.notes ? mdHTML(l.notes) : NOTES_PLACEHOLDER}</div>`;
+}
+function leadNotesHTML(l) {
+  return `<section class="card"><div class="card-head"><h2>Notes</h2></div><div id="lead-notes-body">${leadNotesBodyHTML(l)}</div></section>`;
+}
+function leadNotesOpen(id) {
+  const l = DB.leads.find(x => x.id === id);
+  document.getElementById('lead-notes-body').innerHTML = `<textarea class="textarea" id="lead-notes" maxlength="5000" aria-label="Notes" placeholder="${NOTES_PLACEHOLDER}"
+      oninput="leadNotesFit(this)" onblur="leadNotesClose('${id}', true)" onkeydown="leadNotesKey(event, '${id}')">${esc(l.notes || '')}</textarea>`;
+  const el = document.getElementById('lead-notes');
+  leadNotesFit(el); el.focus(); el.setSelectionRange(el.value.length, el.value.length);
+}
+// The box grows with what is typed, so it never scrolls inside itself and opening it doesn't change its size.
+function leadNotesFit(el) { el.style.height = 'auto'; el.style.height = Math.max(el.scrollHeight + 2, 76) + 'px'; }
+function leadNotesKey(e, id) {
+  if (e.key === 'Escape') { e.stopPropagation(); leadNotesClose(id, false); }
+  else if ((e.metaKey || e.ctrlKey) && e.key === 'Enter') leadNotesClose(id, true);
+}
+// Closing never re-renders the page, so a click that made the box lose focus still lands on whatever was clicked.
+function leadNotesClose(id, save) {
+  const el = document.getElementById('lead-notes');
+  if (!el) return;
+  const l = DB.leads.find(x => x.id === id), next = el.value.trim(), changed = save && next !== (l.notes || '');
+  el.onblur = null;   // taking the box out fires one more blur
+  if (changed) {
+    l.notes = next;
+    const entry = logActivity(id, 'lead_updated', 'Notes updated', '');
+    if (!state.ui.keyMoments) document.getElementById('timeline').insertAdjacentHTML('afterbegin', leadEventHTML(entry));
+    document.getElementById('tl-count').textContent = timelineView(id).count;
+    toast('Notes saved');
+  }
+  document.getElementById('lead-notes-body').innerHTML = leadNotesBodyHTML(l);
+  refreshIcons();
+}
+function leadEdit(on) { state.ui.editing = on; render(); }
+
+function leadSave(id) {
+  const l = DB.leads.find(x => x.id === id);
+  const em = contactRead('le', 'email'), ph = contactRead('le', 'phone');
+  // Source, contact channel and attribution are fixed once a lead exists, so they are carried over as they are.
+  const d = {
+    name: val('le-name'), email: em.value, phone: ph.value, source: l.source,
+    emailLabel: em.label, phoneLabel: ph.label, moreEmails: em.more, morePhones: ph.more,
+    attribution: l.attribution, contactChannel: l.contactChannel
+  };
+  const err = leadValidate(d, id);
+  if (err) { document.getElementById('le-error').textContent = err; return; }
+
+  const labels = { name: 'name', email: 'email', phone: 'phone' };
+  const changed = Object.keys(labels).filter(k => l[k] !== d[k]).map(k => labels[k]);
+  const sig = (label, more) => JSON.stringify([label, more]);
+  if (sig(l.emailLabel || 'Primary', l.moreEmails || []) !== sig(d.emailLabel, d.moreEmails)) changed.push('additional emails');
+  if (sig(l.phoneLabel || 'Primary', l.morePhones || []) !== sig(d.phoneLabel, d.morePhones)) changed.push('additional phone numbers');
+  if (changed.length) logActivity(id, 'lead_updated', 'Details edited', `Updated ${changed.join(', ')}`);
+  MERGE_FIELDS.filter(f => f in d && l[f] !== d[f]).forEach(f => stamp(l, f));
+  Object.assign(l, d);
+  state.ui.editing = false;
+  toast(duplicatesOf(l).length ? 'Lead saved. It may be a duplicate.' : 'Lead saved');
+  render();
+}
+
+// Reassigning is its own action (admin only) and saves straight away.
+function leadAssign(id, userId) {
+  if (!isAdmin()) return;
+  const l = DB.leads.find(x => x.id === id), next = userId || null;
+  if (l.assigneeId === next) return;
+  logActivity(id, 'assignee_changed', 'Assignee changed', `${userName(l.assigneeId)} → ${userName(next)}`);
+  l.assigneeId = next; stamp(l, 'assigneeId');
+  toast(next ? `Assigned to ${userName(next)}` : 'Lead unassigned');
+  render();
+}
+
+
+
+// ---- src/dupes.js ----
+// Duplicate handling: matching incoming leads to existing ones, spotting duplicates later, and merging them.
+
+const plural = (n, one, many) => `${n} ${n === 1 ? one : many}`;
+
+// ---- Matching ---------------------------------------------------------------
+// Two leads are the same person when they share an email (ignoring case) or a phone number (last 8 digits).
+// Any of a lead's emails or phone numbers can match, not just the primary ones.
+const shareKey = (x, y) => x.some(k => k && y.includes(k));
+function matchReason(a, b) {
+  const e = shareKey(emailsOf(a).map(emailKey), emailsOf(b).map(emailKey));
+  const p = shareKey(phonesOf(a).map(phoneKey), phonesOf(b).map(phoneKey));
+  return e && p ? 'email and phone number' : e ? 'email' : p ? 'phone number' : '';
+}
+// Other leads the current user can see that look like the same person.
+function duplicatesOf(l) { return visibleLeads().filter(x => x.id !== l.id && matchReason(l, x)); }
+// Lead ids that have a possible duplicate, for flagging them in the list.
+function dupMap() {
+  const byKey = {}, flagged = {};
+  visibleLeads().forEach(l => new Set([...emailsOf(l).map(e => `e${emailKey(e)}`), ...phonesOf(l).map(p => `p${phoneKey(p)}`)]).forEach(k => { if (k.length > 1) (byKey[k] = byKey[k] || []).push(l.id); }));
+  Object.values(byKey).forEach(ids => { if (ids.length > 1) ids.forEach(id => { flagged[id] = true; }); });
+  return flagged;
+}
+
+// Everyone linked to this lead through a shared email or phone number, directly or through another duplicate.
+function dupGroup(l) {
+  const vis = visibleLeads(), seen = new Set([l.id]), queue = [l];
+  while (queue.length) { const cur = queue.shift(); vis.forEach(x => { if (!seen.has(x.id) && matchReason(cur, x)) { seen.add(x.id); queue.push(x); } }); }
+  return vis.filter(x => seen.has(x.id)).sort((a, b) => a.createdAt - b.createdAt);
+}
+
+function dupBannerHTML(l) {
+  const ds = duplicatesOf(l);
+  if (!ds.length) return '';
+  const group = dupGroup(l);
+  return `<div class="notice" role="alert">${icon('warn')}<div><strong>Possible duplicate${ds.length > 1 ? 's' : ''}</strong>
+    ${ds.map(d => `<div class="notice-row"><span><a href="#/leads/${d.id}">${esc(d.name)}</a> has the same ${matchReason(l, d)}.</span><button class="btn" onclick="mergeOpen('${l.id},${d.id}')">${icon('merge')}Merge</button></div>`).join('')}
+    ${group.length > ds.length + 1 ? `<div class="notice-row"><span>${group.length} leads are linked by shared details.</span><button class="btn" onclick="mergeOpen('${group.map(g => g.id).join(',')}')">${icon('merge')}Merge all ${group.length}</button></div>` : ''}
+  </div></div>`;
+}
+
+// ---- Merging ----------------------------------------------------------------
+// Any number of leads (2 or more). The earliest-created lead is kept and the rest are folded into it.
+// For each field the dialog proposes the most recently updated value, and the person can pick a different one.
+const MERGE_LABELS = { name: 'Name', email: 'Email', phone: 'Phone', status: 'Status', assigneeId: 'Assignee' };
+const mergeShow = (f, v) => f === 'assigneeId' ? (v ? userName(v) : 'Unassigned') : (v || '—');
+const fieldStamp = (l, f) => (l.fieldUpdated && l.fieldUpdated[f]) || l.createdAt;
+const isEmpty = v => v == null || v === '';
+
+// Default choice per field: the latest updated value. An empty value never beats a filled one; ties go to the earlier lead.
+function mergePlan(leads) {
+  const sorted = leads.slice().sort((a, b) => a.createdAt - b.createdAt);
+  const choice = {};
+  MERGE_FIELDS.forEach(f => {
+    const filled = sorted.filter(l => !isEmpty(l[f]));
+    choice[f] = (filled.length ? filled : sorted).reduce((a, b) => fieldStamp(b, f) > fieldStamp(a, f) ? b : a).id;
+  });
+  return { sorted, survivor: sorted[0], others: sorted.slice(1), choice };
+}
+// What a field's dropdown offers: each distinct filled value once. The dropdown starts on the latest value; people can pick another.
+function mergeOptions(plan, f) {
+  const same = v => f === 'email' ? String(v).toLowerCase() : String(v);   // emails that differ only by case are one value
+  const byValue = new Map();
+  plan.sorted.forEach(l => { if (!isEmpty(l[f])) { const k = same(mergeShow(f, l[f])); if (!byValue.has(k) || l.id === plan.choice[f]) byValue.set(k, l); } });
+  return [...byValue.values()].map(l => [l.id, mergeShow(f, l[f])]);
+}
+function mergeLeads(csv) {
+  const leads = String(csv).split(',').map(id => DB.leads.find(x => x.id === id));
+  return leads.length >= 2 && leads.every(l => l && canSeeLead(l)) && new Set(leads).size === leads.length ? leads : null;
+}
+
+function mergeOpen(csv) {
+  const leads = mergeLeads(csv);
+  if (!leads) return;
+  const plan = mergePlan(leads), ids = new Set(leads.map(l => l.id));
+  const acts = DB.activities.filter(x => ids.has(x.leadId)).length, opps = DB.opps.filter(o => ids.has(o.leadId)).length;
+  const row = f => {
+    const opts = mergeOptions(plan, f);
+    const after = opts.length > 1 ? selectHTML('mg-' + f, opts, plan.choice[f], `aria-label="After merge: ${MERGE_LABELS[f]}"`) : `<div class="value-pill">${esc(mergeShow(f, plan.sorted.find(l => l.id === plan.choice[f])[f]))}</div>`;
+    return `<tr><th scope="row">${MERGE_LABELS[f]}</th>${plan.sorted.map(l => `<td data-label="${esc(l.name)}">${esc(mergeShow(f, l[f]))}</td>`).join('')}<td class="after" data-label="After merge">${after}</td></tr>`;
+  };
+  openModal(`Merge ${leads.length} leads`, `
+    <p>The timelines are combined into one lead (${plural(acts, 'activity', 'activities')} and ${plural(opps, 'deal', 'deals')} in total). For each field the most recently updated value is selected, and you can choose a different one.</p>
+    <div class="table-wrap" style="margin-top:12px"><table class="merge-table">
+      <thead><tr><th></th>${plan.sorted.map(l => `<th>${esc(l.name)}<div class="cell-sub">Created ${fmtDate(l.createdAt)}</div></th>`).join('')}<th>After merge</th></tr></thead>
+      <tbody>${MERGE_FIELDS.map(row).join('')}</tbody>
+    </table></div>
+    <p class="muted" style="margin-top:12px">${esc(plan.survivor.name)} (the earliest lead) is kept. Source and first-touch details come from it. Any other emails and phone numbers are kept as additional ones, and notes are combined. This can't be undone.</p>`,
+    `<button class="btn" onclick="closeModal()">Cancel</button><button class="btn btn-primary" onclick="mergeDo('${[...ids].join(',')}')">${icon('merge')}Merge ${leads.length} leads</button>`, 'wide');
+}
+
+const uniqueBy = (arr, key) => { const seen = new Set(); return arr.filter(v => { const k = key(v); if (seen.has(k)) return false; seen.add(k); return true; }); };
+function mergeDo(csv) {
+  const leads = mergeLeads(csv);
+  if (!leads) return;
+  const plan = mergePlan(leads), choice = { ...plan.choice };
+  // Use what the person picked in the dropdowns; fall back to the proposed value where there was no dropdown.
+  MERGE_FIELDS.forEach(f => { const el = document.getElementById('mg-' + f); if (el && leads.some(l => l.id === el.value)) choice[f] = el.value; });
+  const picks = {}, stamps = {};
+  MERGE_FIELDS.forEach(f => { const src = leads.find(l => l.id === choice[f]); picks[f] = src[f]; stamps[f] = fieldStamp(src, f); });
+  const { survivor, others } = plan, gone = new Set(others.map(l => l.id));
+  const acts = DB.activities.filter(x => gone.has(x.leadId)), opps = DB.opps.filter(o => gone.has(o.leadId));
+  acts.forEach(x => { x.leadId = survivor.id; });
+  opps.forEach(o => { o.leadId = survivor.id; });
+  // Nothing is lost: every other email and phone number from the merged leads is kept as an additional one.
+  // A demoted primary becomes "Secondary"; additional ones keep the titles people gave them.
+  const entries = field => leads.flatMap(l => [{ label: 'Secondary', value: l[field], primary: true }, ...(l[field === 'email' ? 'moreEmails' : 'morePhones'] || [])]).filter(x => x.value);
+  const allEmails = entries('email'), allPhones = entries('phone');
+  const chosen = f => leads.find(l => l.id === choice[f]);
+  MERGE_FIELDS.forEach(f => { survivor[f] = picks[f]; });
+  survivor.lostReason = survivor.status === 'Lost' ? chosen('status').lostReason || '' : ''; survivor.lostNote = survivor.status === 'Lost' ? chosen('status').lostNote || '' : '';
+  survivor.emailLabel = chosen('email').emailLabel || 'Primary'; survivor.phoneLabel = chosen('phone').phoneLabel || 'Primary';
+  survivor.moreEmails = uniqueBy(allEmails.filter(x => emailKey(x.value) !== emailKey(survivor.email)).map(x => ({ label: x.label, value: x.value.toLowerCase() })), x => emailKey(x.value));
+  survivor.morePhones = uniqueBy(allPhones.filter(x => x.value !== survivor.phone && !(phoneKey(x.value) && phoneKey(x.value) === phoneKey(survivor.phone))).map(x => ({ label: x.label, value: x.value })), x => phoneKey(x.value) || x.value);
+  // Notes are never dropped: the survivor's come first, then each other lead's that isn't already in them.
+  survivor.notes = uniqueBy(leads.map(l => (l.notes || '').trim()).filter(Boolean), x => x).join('\n\n');
+  survivor.fieldUpdated = { ...stamps };
+  if (others.some(l => l.origin === 'tracked')) survivor.origin = 'tracked';   // a lead that came from tracking stays system-created
+  DB.leads = DB.leads.filter(x => !gone.has(x.id));
+  state.ui.selected = state.ui.selected.filter(id => !gone.has(id));
+  logActivity(survivor.id, 'merged', 'Leads merged', `Merged with ${others.map(l => `${l.name} (${l.id})`).join(', ')}. Combined ${plural(acts.length, 'activity', 'activities')} and ${plural(opps.length, 'deal', 'deals')}.`);
+  closeModal();
+  toast(`${leads.length} leads merged`);
+  navigate('#/leads/' + survivor.id);
+}
+
+// ---- Incoming leads ---------------------------------------------------------
+// A real build would receive these from click tracking and the chat, form and call integrations.
+// Here the prototype toolbar simulates one, so the matching rules can be tried.
+
+function trackedClicks(source, a) {
+  const out = [];
+  const visit = visitMeta(source, a);
+  if (source === 'Google Ads' || source === 'Meta Ads') out.push(['ad_click', `Clicked ${source} ad`, [a.campaign, a.ad, a.keyword && `“${a.keyword}”`].filter(Boolean).join(' · '), visit]);
+  else if (source === 'Organic Search') out.push(['search', 'Arrived from organic search', a.keyword ? `Searched “${a.keyword}”` : '', visit]);
+  else if (source === 'Referral') out.push(['referral', 'Arrived from a referral link', a.referrer || '', visit]);
+  else if (source === 'Email') out.push(['email_click', 'Clicked an email link', a.campaign || '', visit]);
+  else out.push(['direct', 'Visited the site directly', '', visit]);
+  if (a.landingPage) out.push(['page_view', 'Viewed page', a.landingPage, { landing: true }]);
+  return out;
+}
+
+// Adds a new lead, or, when the email or phone number already belongs to a lead, adds the activity to that lead's timeline.
+// Matching runs over every lead in the organisation, whoever is looking at the screen.
+function receiveLead(p) {
+  const email = emailKey(p.email), phone = phoneKey(p.phone);
+  const match = (email && DB.leads.find(l => emailsOf(l).some(e => emailKey(e) === email))) || (phone && DB.leads.find(l => phonesOf(l).some(x => phoneKey(x) === phone))) || null;
+  const now = Date.now(), MIN = 6e4;
+  const add = (leadId, at, type, title, detail, meta) => DB.activities.push({ id: 'a' + (++DB.seq), seq: DB.seq, leadId, at, type, title, detail: detail || '', by: null, meta: meta || null });
+  const attribution = Object.fromEntries(ATTR_FIELDS.map(f => [f.key, p.attribution ? (p.attribution[f.key] || '') : '']));
+  let lead = match, matchBy = '', filled = [];
+
+  if (!match) {
+    const id = 'L' + (1001 + DB.leads.length) + '-' + (++DB.seq);
+    lead = { id, name: p.name || 'Unknown', email: email, phone: p.phone || '', notes: '', emailLabel: 'Primary', phoneLabel: 'Primary', moreEmails: [], morePhones: [], status: 'New', source: p.source, attribution, contactChannel: p.channel, createdAt: now, assigneeId: null, origin: 'tracked', fieldUpdated: Object.fromEntries(MERGE_FIELDS.map(f => [f, now])) };
+    DB.leads.push(lead);
+  } else {
+    const byEmail = email && emailsOf(match).some(e => emailKey(e) === email), byPhone = phone && phonesOf(match).some(x => phoneKey(x) === phone);
+    matchBy = byEmail && byPhone ? 'email and phone number' : byEmail ? 'email' : 'phone number';
+    // Only fill gaps; never overwrite what the lead already has.
+    if (!match.email && email) { match.email = email; stamp(match, 'email'); filled.push('email'); }
+    if (!match.phone && p.phone) { match.phone = p.phone; stamp(match, 'phone'); filled.push('phone number'); }
+    // A different email or number from the same person is kept as an additional one.
+    if (email && !emailsOf(match).some(e => emailKey(e) === email)) { match.moreEmails = [...(match.moreEmails || []), { label: 'Secondary', value: email }]; filled.push('additional email'); }
+    if (p.phone && !phonesOf(match).some(x => x === p.phone || (phoneKey(x) && phoneKey(x) === phoneKey(p.phone)))) { match.morePhones = [...(match.morePhones || []), { label: 'Secondary', value: p.phone }]; filled.push('additional phone number'); }
+  }
+
+  trackedClicks(p.source, attribution).forEach(([type, title, detail, meta], i, all) => add(lead.id, now - (all.length - i + 1) * MIN, type, title, detail, meta));
+  if (match) {
+    add(lead.id, now - MIN, 'conversation_started', `Contacted again via ${p.channel}`, `Matched to this lead by ${matchBy}, so no new lead was created.`, { channel: p.channel });
+    if (filled.length) add(lead.id, now, 'lead_updated', 'Details updated', `Added ${filled.join(' and ')} from the new submission.`);
+  } else {
+    add(lead.id, now - MIN, 'conversation_started', `Started a conversation via ${p.channel}`, 'Earlier tracked clicks were matched to this contact.', { channel: p.channel });
+    add(lead.id, now, 'lead_created', 'Lead created automatically', `Identified by ${email ? 'email' : 'phone number'}`);
+  }
+  return { lead, created: !match, matchBy, filled };
+}
+
+function intakeOpen() {
+  openModal('Simulate incoming lead', `
+    <p class="muted" style="margin-bottom:14px">Prototype only. This stands in for a form, call or chat arriving from tracking. If the email or phone number matches an existing lead, the activity is added to that lead's timeline instead of creating a new lead.</p>
+    <div class="form-grid">
+      ${fieldHTML('Name', 'in-name', inputHTML('in-name', ''), 'span-2')}
+      ${fieldHTML('Email', 'in-email', inputHTML('in-email', '', 'type="email"'))}
+      ${fieldHTML('Phone', 'in-phone', inputHTML('in-phone', '', 'type="tel"'))}
+      ${fieldHTML('Source', 'in-source', selectHTML('in-source', TRACKED_SOURCES, 'Google Ads', `onchange="attrToggle('in', this.value)"`))}
+      ${fieldHTML('Contacted us via', 'in-channel', selectHTML('in-channel', CONTACT_CHANNELS.filter(c => c !== 'In person'), 'Web form'))}
+      ${attrFieldsHTML('in', 'Google Ads', {})}
+    </div>
+    <p class="form-error" id="in-error" role="alert"></p>`,
+    `<button class="btn" onclick="closeModal()">Cancel</button><button class="btn btn-primary" onclick="intakeSubmit()">Receive lead</button>`);
+}
+
+function intakeSubmit() {
+  const source = val('in-source'), email = val('in-email'), phone = val('in-phone');
+  const err = !email && !phone ? 'Enter an email or a phone number.' : email && !validEmail(email) ? 'Enter a valid email address.' : '';
+  if (err) { document.getElementById('in-error').textContent = err; return; }
+  const r = receiveLead({ name: val('in-name'), email, phone, source, channel: val('in-channel'), attribution: attrRead('in', source) });
+  closeModal();
+  toast(r.created ? 'New lead created' : `Added to ${r.lead.name}'s timeline, matched by ${r.matchBy}`);
+  if (canSeeLead(r.lead)) navigate('#/leads/' + r.lead.id); else render();
+}
+
+
+// ---- src/lost.js ----
+// Lost needs a reason. Marking a lead or a deal as Lost opens this dialog first: pick a reason (required) and add details (optional).
+
+let pendingLost = null;
+
+// ctx: { title, intro, reasons, apply(reason, note), cancel() }
+function lostOpen(ctx) {
+  pendingLost = ctx;
+  openModal(ctx.title, `
+    <p class="muted" style="margin-bottom:14px">${esc(ctx.intro)}</p>
+    <div class="form-grid">
+      ${fieldHTML('Reason', 'lost-reason', selectHTML('lost-reason', [['', 'Choose a reason…'], ...ctx.reasons], ''), 'span-2', '', true)}
+      ${fieldHTML('Details', 'lost-note', '<textarea class="textarea" id="lost-note" placeholder="Anything your team should know"></textarea>', 'span-2', 'Optional.')}
+    </div>
+    <p class="form-error" id="lost-error" role="alert"></p>`,
+    `<button class="btn" onclick="lostCancel()">Cancel</button><button class="btn btn-delete" onclick="lostConfirm()">Mark as lost</button>`);
+}
+function lostConfirm() {
+  const reason = val('lost-reason'), note = val('lost-note');
+  if (!reason) { document.getElementById('lost-error').textContent = 'Choose a reason.'; return; }
+  const ctx = pendingLost; pendingLost = null;
+  closeModal();
+  if (ctx) ctx.apply(reason, note);
+}
+function lostCancel() {
+  const ctx = pendingLost; pendingLost = null;
+  closeModal();
+  if (ctx && ctx.cancel) ctx.cancel();
+}
+// How a lost reason reads in the timeline.
+const lostText = (reason, note) => `Reason: ${reason}.${note ? ` \u201c${note}\u201d` : ''}`;
+
+
+// ---- src/journey.js ----
+// Customer journey: the tracked visits and clicks that led up to the first conversation, shown as touchpoints.
+
+const TOUCH_TYPES = ['ad_click', 'search', 'referral', 'email_click', 'direct', 'recorded'];
+const TOUCH_FALLBACK = { recorded: 'Recorded by hand', ad_click: 'Ad click', search: 'Organic Search', referral: 'Referral', email_click: 'Email', direct: 'Direct' };
+// How the first conversation reads in the summary line, by the channel the person used.
+const CHANNEL_VERB = { 'WhatsApp': 'Messaged', 'Live chat': 'Messaged', 'Phone call': 'Called', 'Web form': 'Submitted a form', 'Email': 'Emailed' };
+
+// Groups a lead's tracked events, oldest first, into touchpoints, runs of browsed pages, and conversations.
+// A landing page is already shown on its touchpoint, so it is not counted again as a browsed page.
+function journeyOf(leadId) {
+  const steps = trackedSteps(leadId), l = DB.leads.find(x => x.id === leadId);
+  // A lead with no tracked visit but a recorded origin (Walk-in, Event, Personal referral, Phone enquiry) has that origin as its one touch,
+  // dated when the lead was added. Tracked touches always win; a recorded one is only a stand-in.
+  if (l && !steps.some(s => s.kind === 'touch') && MANUAL_SOURCES.includes(l.source)) {
+    const by = (DB.activities.find(a => a.leadId === leadId && a.type === 'lead_created') || {}).by || '';
+    steps.unshift({ kind: 'touch', e: { id: 'rec-' + leadId, seq: 0, leadId, at: l.createdAt, type: 'recorded', title: l.source, detail: '', by: null, meta: { label: l.source, detail: l.attribution.sourceDetail || '', recordedBy: by } } });
+  }
+  return steps;
+}
+function trackedSteps(leadId) {
+  const events = DB.activities.filter(e => e.leadId === leadId && (TRACKED_TYPES.includes(e.type) || e.type === 'conversation_started')).sort((a, b) => a.at - b.at || a.seq - b.seq);
+  const steps = [];
+  events.forEach(e => {
+    if (TOUCH_TYPES.includes(e.type)) steps.push({ kind: 'touch', e });
+    else if (e.type === 'conversation_started') steps.push({ kind: 'convo', e });
+    else if (!(e.meta && e.meta.landing)) {
+      const last = steps[steps.length - 1];
+      if (last && last.kind === 'pages') last.list.push(e); else steps.push({ kind: 'pages', list: [e] });
+    }
+  });
+  return steps;
+}
+const touchLabel = e => (e.meta && e.meta.label) || TOUCH_FALLBACK[e.type];
+
+// First touch is the earliest visit. Last touch only exists once the lead has a deal: it is the latest visit before the first deal
+// was made. A visit after that is never the last touch, and with no deal there is no last touch at all (`last` is null).
+// Direct visits are skipped for last touch when an earlier visit by another channel exists. A recorded origin counts as a touch only when there are no tracked ones.
+function journeyEnds(steps, leadId) {
+  const touches = steps.filter(s => s.kind === 'touch').map(s => s.e);
+  const deals = DB.opps.filter(o => o.leadId === leadId);
+  const before = deals.length ? touches.filter(e => e.at <= Math.min(...deals.map(o => o.createdAt))) : [];
+  // Last non-direct: a direct visit is usually someone returning, so it only takes the label when nothing else came before the deal.
+  const pick = [...before].reverse().find(e => e.type !== 'direct') || before[before.length - 1] || null;
+  return { touches, first: touches[0], last: pick };
+}
+
+function journeySummary(steps, leadId) {
+  const { touches, first, last } = journeyEnds(steps, leadId), convo = steps.find(s => s.kind === 'convo');
+  const headline = !last ? `First touch ${touchLabel(first)}.` : last === first ? `First and last touch ${touchLabel(first)}.` : `First touch ${touchLabel(first)}. Converted on ${touchLabel(last)}.`;
+  const ads = touches.filter(e => e.type === 'ad_click').length, pages = steps.filter(s => s.kind === 'pages').reduce((n, s) => n + s.list.length, 0);
+  const parts = [];
+  if (first.type === 'recorded') parts.push('Recorded by hand');
+  if (ads) parts.push(`Clicked ${plural(ads, 'ad', 'ads')}`);
+  if (pages) parts.push(`Browsed ${plural(pages, 'page', 'pages')}`);
+  if (convo) {
+    const days = Math.floor((convo.e.at - first.at) / 864e5), channel = convo.e.meta && convo.e.meta.channel;
+    parts.push(`${CHANNEL_VERB[channel] || 'Got in touch'} ${days < 1 ? 'the same day' : days + (days === 1 ? ' day later' : ' days later')}`);
+  }
+  return { headline, line: parts.join(' · ') };
+}
+
+// What the timeline shows: everything, or only the key moments when the summary has been clicked.
+function timelineView(leadId) {
+  const all = timelineOf(leadId), shown = state.ui.keyMoments ? all.filter(x => x.key) : all;
+  return { html: shown.map(x => x.html).join(''), count: state.ui.keyMoments ? `${shown.length} of ${plural(all.length, 'activity', 'activities')} · Key moments only` : `${plural(all.length, 'activity', 'activities')} · Newest first` };
+}
+function journeyFocus(leadId) {
+  state.ui.keyMoments = !state.ui.keyMoments;
+  const v = timelineView(leadId);
+  document.getElementById('timeline').innerHTML = v.html;
+  document.getElementById('tl-count').textContent = v.count;
+  document.getElementById('j-sum').outerHTML = journeySummaryHTML(leadId);
+  refreshIcons();
+}
+function journeyToggle(leadId, gid) {
+  const o = state.ui.journeyOpen, i = o.indexOf(gid);
+  if (i < 0) o.push(gid); else o.splice(i, 1);
+  document.getElementById('timeline').innerHTML = timelineView(leadId).html;
+  refreshIcons();
+}
+
+// ---- Timeline entries for tracked visits --------------------------------------
+// Tracked visits are drawn as a dot on the timeline line with a tinted card beside it, not as an icon circle.
+function touchItemHTML(e, tag) {
+  const m = e.meta || {};
+  const pairs = [['Referred by', m.referrer], ['Landing page', m.landingPage], ['Campaign', m.campaign], ['Ad', m.ad], [e.type === 'search' ? 'Search term' : 'Keyword', m.keyword], ['Medium', m.medium], ['Source', m.source], ['Click ID', m.clickId], ['Details', m.detail], ['Recorded by', m.recordedBy]].filter(p => p[1]);
+  return `<li class="tl-item is-journey"><span class="tl-dot"></span><div><div class="j-card">
+    <div class="j-head">${activityIcon(e.type)}<span>${esc(touchLabel(e))}</span>${tag ? pill(tag) : ''}</div>
+    <div class="tl-meta">${fmtDateTime(e.at)}</div>
+    ${pairs.length ? `<dl class="kv j-kv">${pairs.map(([k, v]) => `<dt>${k}</dt><dd>${esc(v)}</dd>`).join('')}</dl>` : e.detail ? `<div class="tl-detail">${esc(e.detail)}</div>` : ''}
+  </div></div></li>`;
+}
+function pagesItemHTML(leadId, list) {
+  const gid = list[0].id, open = state.ui.journeyOpen.includes(gid);
+  return `<li class="tl-item is-journey is-pages"><span class="tl-dot"></span><div>
+    <button class="j-toggle${open ? ' is-open' : ''}" onclick="journeyToggle('${leadId}', '${gid}')" aria-expanded="${open}">${icon('page_view')}<span>Browsed ${plural(list.length, 'page', 'pages')}</span>${icon('expand')}</button>
+    ${open ? `<ul class="j-pages">${list.map(e => `<li><span>${esc(e.detail)}</span><span class="tl-meta">${fmtDateTime(e.at)}</span></li>`).join('')}</ul>` : ''}
+  </div></li>`;
+}
+
+// The entry for the conversion: the first deal made for the lead (the same moment last touch is measured against).
+function convertedEvent(leadId) {
+  const first = DB.opps.filter(o => o.leadId === leadId).sort((a, b) => a.createdAt - b.createdAt)[0];
+  if (!first) return null;
+  const made = DB.activities.filter(a => a.leadId === leadId && a.type === 'opp_created').sort((a, b) => a.at - b.at || a.seq - b.seq);
+  return made.find(a => a.meta && a.meta.oppId === first.id) || made[0] || null;
+}
+
+// Every entry of a lead's timeline, newest first. Tracked clicks become touchpoint entries and "Browsed N pages" groups;
+// landing-page views are folded into their touchpoint. Everything else (conversation, notes, deals, edits) is a plain entry.
+function timelineOf(leadId) {
+  const all = DB.activities.filter(a => a.leadId === leadId), folded = new Set(), items = [];
+  const steps = journeyOf(leadId), ends = steps.some(s => s.kind === 'touch') ? journeyEnds(steps, leadId) : null;
+  // The visit that opened the journey is always labelled. The one that led to the first deal is labelled too, but only when there is a deal. A single visit can be both.
+  const tagOf = e => !ends ? '' : ends.first === ends.last && e === ends.first ? 'First and last touch' : e === ends.first ? 'First touch' : e === ends.last ? 'Last touch' : '';
+  steps.forEach(s => {
+    if (s.kind === 'touch') { folded.add(s.e.id); items.push({ at: s.e.at, seq: s.e.seq, html: touchItemHTML(s.e, tagOf(s.e)), key: !!tagOf(s.e) }); }
+    else if (s.kind === 'pages') { const last = s.list[s.list.length - 1]; s.list.forEach(e => folded.add(e.id)); items.push({ at: last.at, seq: last.seq, html: pagesItemHTML(leadId, s.list) }); }
+  });
+  all.forEach(e => { if (e.type === 'page_view' && e.meta && e.meta.landing) folded.add(e.id); });
+  // The entries "key moments" keeps: first touch, last touch (with a deal) and the conversion itself.
+  const conv = convertedEvent(leadId);
+  all.filter(e => !folded.has(e.id)).forEach(e => items.push({ at: e.at, seq: e.seq, html: leadEventHTML(e, conv && e.id === conv.id ? 'Converted' : ''), key: !!(conv && e.id === conv.id) }));
+  return items.sort((a, b) => b.at - a.at || b.seq - a.seq);
+}
+
+// The one-line story above the timeline: where they came from and how long it took them to get in touch.
+function journeySummaryHTML(leadId) {
+  const steps = journeyOf(leadId);
+  if (!steps.some(s => s.kind === 'touch')) return '';
+  const sum = journeySummary(steps, leadId);
+  const on = state.ui.keyMoments;
+  return `<button class="j-summary${on ? ' is-on' : ''}" id="j-sum" aria-pressed="${on}" onclick="journeyFocus('${leadId}')" title="${on ? 'Show all activity' : 'Show only the first touch, last touch and conversion'}">${icon('journey')}<div><div class="j-headline">${esc(sum.headline)}</div><div class="tl-meta">${esc(sum.line)}</div></div><span class="j-focus" aria-hidden="true">${icon('focus')}</span></button>`;
+}
+
+
+// ---- src/users.js ----
+// Users page (admin only) and the prototype toolbar.
+
+function usersPage() {
+  if (!isAdmin()) { location.replace('#/leads'); return null; }
+  const count = id => DB.leads.filter(l => l.assigneeId === id).length;
+  return `
+    <header class="page-head">
+      <div><h1>Users</h1><p class="sub">Admins see every lead. Basic users see only the leads assigned to them.</p></div>
+      <button class="btn btn-primary" onclick="userOpenAdd()">${icon('add')}Add user</button>
+    </header>
+    <section class="card">
+      <div class="table-wrap"><table>
+        <thead><tr><th>Name</th><th class="hide-sm">Email</th><th>Role</th><th class="num">Leads assigned</th></tr></thead>
+        <tbody>${DB.users.map(u => `<tr>
+          <td><div class="cell-main">${esc(u.name)}${u.id === state.userId ? ' <span class="muted">(you)</span>' : ''}</div></td>
+          <td class="hide-sm">${esc(u.email)}</td>
+          <td>${u.id === state.userId ? pill('Admin') : selectHTML('role-' + u.id, [['admin', 'Admin'], ['basic', 'Basic']], u.role, `onchange="userSetRole('${u.id}', this.value)" aria-label="Role for ${esc(u.name)}" style="width:auto;min-width:110px"`)}</td>
+          <td class="num">${count(u.id)}</td>
+        </tr>`).join('')}</tbody>
+      </table></div>
+      <div class="count">You can't change your own role, so the organisation always has an admin.</div>
+    </section>`;
+}
+
+function userSetRole(id, role) {
+  const u = DB.users.find(x => x.id === id);
+  u.role = role;
+  toast(`${u.name} is now ${role === 'admin' ? 'an admin' : 'a basic user'}`);
+  render();
+}
+
+function userOpenAdd() {
+  openModal('Add user', `
+    <div class="form-grid">
+      ${fieldHTML('Name', 'nu-name', inputHTML('nu-name', '', 'required aria-required="true"'), '', '', true)}
+      ${fieldHTML('Email', 'nu-email', inputHTML('nu-email', '', 'type="email" required aria-required="true"'), '', '', true)}
+      ${fieldHTML('Role', 'nu-role', selectHTML('nu-role', [['basic', 'Basic'], ['admin', 'Admin']], 'basic'), 'span-2')}
+    </div>
+    <p class="form-error" id="nu-error" role="alert"></p>`,
+    `<button class="btn" onclick="closeModal()">Cancel</button><button class="btn btn-primary" onclick="userSaveNew()">Add user</button>`);
+}
+
+function userSaveNew() {
+  const name = val('nu-name'), email = val('nu-email').toLowerCase();
+  const err = !name ? 'Enter a name.' : !validEmail(email) ? 'Enter a valid email address.' : DB.users.some(u => u.email === email) ? 'A user with this email already exists.' : '';
+  if (err) { document.getElementById('nu-error').textContent = err; return; }
+  DB.users.push({ id: 'u' + (DB.users.length + 1) + '-' + (++DB.seq), name, email, role: val('nu-role') });
+  closeModal();
+  toast('User added');
+  render();
+}
+
+// ---- Prototype toolbar (not part of the product) ----------------------------
+function devbarHTML() {
+  return `<span class="devbar-title">CRM Lite Demo <span class="tag">DEV</span></span>
+    <label><span class="hide-sm">View as</span> <select onchange="devViewAs(this.value)" aria-label="View as user">${DB.users.map(u => `<option value="${u.id}"${u.id === state.userId ? ' selected' : ''}>${esc(u.name)} (${u.role === 'admin' ? 'Admin' : 'Basic'})</option>`).join('')}</select></label>
+    <div class="devbar-toggles">
+      <span class="lbl">Actions:</span>
+      <button type="button" class="dev-toggle" onclick="intakeOpen()" aria-label="Simulate incoming lead">${icon('inbox')}<span class="hide-sm">Simulate incoming lead</span></button>
+      <button type="button" class="dev-toggle" onclick="devReset()" aria-label="Reset data">${icon('reset')}<span class="hide-sm">Reset data</span></button>
+    </div>`;
+}
+
+function devViewAs(id) {
+  state.userId = id;
+  state.ui.assignee = '';
+  state.ui.selected = [];
+  state.ui.editing = false;
+  closeModal();
+  render();
+}
+
+function devReset() {
+  DB = seedData();
+  state.userId = 'u1';
+  Object.assign(state.ui, { q: '', status: '', source: '', assignee: '', oppStatus: '', editing: false, selected: [] });
+  closeModal();
+  toast('Data reset');
+  navigate('#/leads');
+}
+
+
+// ---- src/app.js ----
+// Start-up.
+window.addEventListener('hashchange', () => { state.ui.editing = false; state.ui.keyMoments = false; state.ui.selected = []; state.ui.drpOpen = ''; closeModal(); render(); });
+if (!location.hash) history.replaceState(null, '', '#/leads');
+render();
+
+</script>
+</body>
+</html>
