@@ -30,8 +30,8 @@ function leadsSummaryHTML(leads) {
   return `
     <div class="tiles">
       ${tile('Leads', leads.length, 'All time')}
-      ${tile('Won revenue', fmtMoney(won), 'From won deals')}
       ${tile('Converted', converted, leads.length ? `${Math.round(converted / leads.length * 100)}% of leads` : '—')}
+      ${tile('Won revenue', fmtMoney(won), 'From won deals')}
     </div>`;
 }
 
